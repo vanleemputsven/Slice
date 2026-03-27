@@ -1,0 +1,229 @@
+@import "tailwindcss";
+
+/*
+ * Slice — contemporary dark UI
+ * Neutral cool base, one vivid accent, soft radii (not “accounting software”).
+ */
+
+:root {
+  color-scheme: dark;
+
+  --slice-canvas: 11 12 15;
+  --slice-surface: 20 22 28;
+  --slice-surface-alt: 28 31 39;
+  --slice-border: 44 48 60;
+  --slice-fg: 246 247 251;
+  --slice-fg-secondary: 181 188 204;
+  --slice-muted: 115 122 138;
+  /* Electric coral — sharp “slice”, not muddy rust */
+  --slice-accent: 255 88 77;
+  --slice-accent-bright: 255 125 118;
+  --slice-accent-deep: 220 62 58;
+  --slice-on-accent: 255 255 255;
+  --slice-success: 52 211 153;
+  --slice-warning: 251 191 36;
+  --slice-danger: 248 113 113;
+
+  --slice-radius-sm: 0.5rem;
+  --slice-radius-md: 0.75rem;
+  --slice-radius-lg: 1rem;
+  --slice-radius-xl: 1.25rem;
+
+  --slice-shadow-card:
+    0 0 0 1px rgb(255 255 255 / 0.06) inset,
+    0 1px 0 rgb(255 255 255 / 0.04) inset,
+    0 20px 50px -12px rgb(0 0 0 / 0.55);
+}
+
+@theme inline {
+  --font-sans: var(--font-slice-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-slice-display), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-slice-mono), ui-monospace, monospace;
+
+  --color-canvas: rgb(var(--slice-canvas));
+  --color-surface: rgb(var(--slice-surface));
+  --color-surface-alt: rgb(var(--slice-surface-alt));
+  --color-border-subtle: rgb(var(--slice-border));
+  --color-fg: rgb(var(--slice-fg));
+  --color-fg-secondary: rgb(var(--slice-fg-secondary));
+  --color-muted: rgb(var(--slice-muted));
+  --color-accent: rgb(var(--slice-accent));
+  --color-accent-bright: rgb(var(--slice-accent-bright));
+  --color-accent-deep: rgb(var(--slice-accent-deep));
+  --color-on-accent: rgb(var(--slice-on-accent));
+  --color-success: rgb(var(--slice-success));
+  --color-warning: rgb(var(--slice-warning));
+  --color-danger: rgb(var(--slice-danger));
+
+  --radius-sm: var(--slice-radius-sm);
+  --radius-md: var(--slice-radius-md);
+  --radius-lg: var(--slice-radius-lg);
+  --radius-xl: var(--slice-radius-xl);
+
+  --shadow-card: var(--slice-shadow-card);
+
+  --animate-slice-in: slice-in-soft 0.45s cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+
+@keyframes slice-in-soft {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes slice-in-soft {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+body {
+  background-color: rgb(var(--slice-canvas));
+  /* Single soft lift — coral only, no secondary “tech purple” */
+  background-image: radial-gradient(
+    ellipse 130% 70% at 50% -35%,
+    rgb(var(--slice-accent) / 0.09),
+    transparent 52%
+  );
+  background-attachment: fixed;
+  color: rgb(var(--slice-fg));
+}
+
+@layer base {
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  ::selection {
+    background-color: rgb(var(--slice-accent) / 0.35);
+    color: rgb(var(--slice-fg));
+  }
+
+  :where(a, button, input, textarea, select, summary, [role="button"]):focus-visible {
+    outline: 2px solid rgb(var(--slice-accent-bright));
+    outline-offset: 2px;
+  }
+
+  dialog::backdrop {
+    background: rgb(5 6 9 / 0.75);
+    backdrop-filter: blur(4px);
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-slice-display), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  /* Optional sharp corner — use sparingly */
+  .slice-chamfer-sm {
+    clip-path: polygon(
+      0 0,
+      100% 0,
+      100% calc(100% - 8px),
+      calc(100% - 8px) 100%,
+      0 100%
+    );
+  }
+}
+
+@layer components {
+  .slice-card {
+    position: relative;
+    border-radius: var(--slice-radius-xl);
+    border: 1px solid rgb(255 255 255 / 0.07);
+    background: linear-gradient(
+      165deg,
+      rgb(var(--slice-surface) / 0.9) 0%,
+      rgb(var(--slice-surface-alt) / 0.55) 100%
+    );
+    box-shadow: var(--slice-shadow-card);
+  }
+
+  .slice-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold transition-[transform,filter,box-shadow] disabled:pointer-events-none disabled:opacity-45;
+    border-radius: 9999px;
+    color: rgb(var(--slice-on-accent));
+    background: linear-gradient(
+      180deg,
+      rgb(var(--slice-accent-bright)) 0%,
+      rgb(var(--slice-accent)) 100%
+    );
+    box-shadow:
+      0 0 0 1px rgb(0 0 0 / 0.2) inset,
+      0 1px 0 rgb(255 255 255 / 0.2) inset,
+      0 8px 24px rgb(var(--slice-accent-deep) / 0.35);
+  }
+
+  .slice-btn-primary:hover {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slice-btn-primary:hover {
+      transform: none;
+    }
+  }
+
+  .slice-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold transition-[background,border-color,color] disabled:pointer-events-none disabled:opacity-45;
+    border-radius: 9999px;
+    color: rgb(var(--slice-fg-secondary));
+    background: rgb(255 255 255 / 0.04);
+    border: 1px solid rgb(255 255 255 / 0.08);
+  }
+
+  .slice-btn-secondary:hover {
+    color: rgb(var(--slice-fg));
+    background: rgb(255 255 255 / 0.07);
+    border-color: rgb(255 255 255 / 0.12);
+  }
+
+  .slice-input {
+    @apply mt-1 block w-full px-3.5 py-2.5 text-sm transition-[border-color,box-shadow];
+    border-radius: var(--slice-radius-md);
+    color: rgb(var(--slice-fg));
+    background: rgb(var(--slice-canvas) / 0.55);
+    border: 1px solid rgb(255 255 255 / 0.09);
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.2);
+  }
+
+  .slice-input::placeholder {
+    color: rgb(var(--slice-muted));
+  }
+
+  .slice-input:focus-visible {
+    border-color: rgb(var(--slice-accent-bright) / 0.55);
+    box-shadow:
+      0 0 0 3px rgb(var(--slice-accent) / 0.18),
+      inset 0 1px 2px rgb(0 0 0 / 0.2);
+  }
+
+  /* Readable micro-label — not shouty caps */
+  .slice-label {
+    @apply text-xs font-medium text-muted;
+  }
+
+  .slice-header-shell {
+    border-bottom: 1px solid rgb(255 255 255 / 0.06);
+    background: rgb(var(--slice-canvas) / 0.75);
+    backdrop-filter: blur(20px) saturate(1.2);
+  }
+}

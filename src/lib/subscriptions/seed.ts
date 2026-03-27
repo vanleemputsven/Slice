@@ -1,0 +1,142 @@
+import type { SubscriptionRecord } from "@/lib/validation/subscription";
+
+function iso(d: string): string {
+  return new Date(d).toISOString();
+}
+
+/** Realistic demo data for first launch / dev. Dates relative-friendly. */
+export function createSeedSubscriptions(reference: Date = new Date()): SubscriptionRecord[] {
+  const y = reference.getFullYear();
+  const m = String(reference.getMonth() + 1).padStart(2, "0");
+  const d0 = reference.getDate();
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  const soon = `${y}-${m}-${pad(Math.min(d0 + 3, 28))}`;
+  const week = `${y}-${m}-${pad(Math.min(d0 + 6, 28))}`;
+  const mid = `${y}-${m}-15`;
+
+  return [
+    {
+      id: "00000000-0000-4000-a000-000000000001",
+      name: "Team productivity suite",
+      provider: "Notion",
+      iconKey: "notion",
+      category: "Productivity",
+      billingCycle: "monthly",
+      totalPrice: 18,
+      currency: "USD",
+      shared: true,
+      shareCount: 3,
+      nextPaymentDate: soon,
+      notes: "Shared with roommates for household planning.",
+      active: true,
+      reviewFlag: false,
+      createdAt: iso(`${y}-01-01T12:00:00.000Z`),
+      updatedAt: iso(`${y}-01-01T12:00:00.000Z`),
+    },
+    {
+      id: "00000000-0000-4000-a000-000000000002",
+      name: "Streaming (4K)",
+      provider: "Netflix",
+      iconKey: "netflix",
+      category: "Entertainment",
+      billingCycle: "monthly",
+      totalPrice: 24.99,
+      currency: "USD",
+      shared: true,
+      shareCount: 2,
+      nextPaymentDate: week,
+      notes: "",
+      active: true,
+      reviewFlag: true,
+      createdAt: iso(`${y}-01-02T12:00:00.000Z`),
+      updatedAt: iso(`${y}-01-02T12:00:00.000Z`),
+    },
+    {
+      id: "00000000-0000-4000-a000-000000000003",
+      name: "Cloud & IDE",
+      provider: "GitHub",
+      iconKey: "github",
+      category: "Cloud / Developer Tools",
+      billingCycle: "monthly",
+      totalPrice: 10,
+      currency: "USD",
+      shared: false,
+      nextPaymentDate: mid,
+      notes: "Pro account",
+      active: true,
+      reviewFlag: false,
+      createdAt: iso(`${y}-01-03T12:00:00.000Z`),
+      updatedAt: iso(`${y}-01-03T12:00:00.000Z`),
+    },
+    {
+      id: "00000000-0000-4000-a000-000000000004",
+      name: "Music",
+      provider: "Spotify",
+      iconKey: "spotify",
+      category: "Entertainment",
+      billingCycle: "yearly",
+      totalPrice: 119.88,
+      currency: "USD",
+      shared: false,
+      nextPaymentDate: `${y}-09-01`,
+      notes: "Annual saves two months vs monthly.",
+      active: true,
+      reviewFlag: false,
+      createdAt: iso(`${y}-01-04T12:00:00.000Z`),
+      updatedAt: iso(`${y}-01-04T12:00:00.000Z`),
+    },
+    {
+      id: "00000000-0000-4000-a000-000000000005",
+      name: "Gym membership",
+      provider: "Local Fit",
+      iconKey: "gym",
+      category: "Health",
+      billingCycle: "monthly",
+      totalPrice: 49,
+      currency: "USD",
+      shared: false,
+      nextPaymentDate: `${y}-${m}-01`,
+      notes: "",
+      active: true,
+      reviewFlag: true,
+      createdAt: iso(`${y}-01-05T12:00:00.000Z`),
+      updatedAt: iso(`${y}-01-05T12:00:00.000Z`),
+    },
+    {
+      id: "00000000-0000-4000-a000-000000000006",
+      name: "VPN",
+      provider: "Mullvad",
+      iconKey: "vpn",
+      category: "Utilities",
+      billingCycle: "monthly",
+      totalPrice: 5.5,
+      currency: "USD",
+      shared: false,
+      nextPaymentDate: `${y}-${m}-22`,
+      notes: "",
+      active: true,
+      reviewFlag: false,
+      createdAt: iso(`${y}-01-06T12:00:00.000Z`),
+      updatedAt: iso(`${y}-01-06T12:00:00.000Z`),
+    },
+    {
+      id: "00000000-0000-4000-a000-000000000007",
+      name: "Language learning",
+      provider: "Duolingo",
+      iconKey: "duo",
+      category: "Education",
+      billingCycle: "custom",
+      customPeriodMonths: 12,
+      totalPrice: 83.99,
+      currency: "USD",
+      shared: false,
+      nextPaymentDate: `${y}-12-01`,
+      notes: "Super annual",
+      active: true,
+      reviewFlag: false,
+      createdAt: iso(`${y}-01-07T12:00:00.000Z`),
+      updatedAt: iso(`${y}-01-07T12:00:00.000Z`),
+    },
+  ];
+}
