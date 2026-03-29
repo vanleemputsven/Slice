@@ -1,4 +1,5 @@
 import { AppHeader } from "@/components/layout/app-header";
+import { SliceBootScreen } from "@/components/layout/slice-boot-screen";
 
 export default function AppGroupLayout({
   children,
@@ -6,6 +7,7 @@ export default function AppGroupLayout({
   children: React.ReactNode;
 }) {
   return (
+    <SliceBootScreen>
     <div className="relative min-h-screen bg-canvas">
       {/* Soft dot grid — structure without “ruled paper” stripes */}
       <div
@@ -25,5 +27,6 @@ export default function AppGroupLayout({
         </main>
       </div>
     </div>
+    </SliceBootScreen>
   );
 }

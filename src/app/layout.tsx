@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Figtree, JetBrains_Mono, Syne } from "next/font/google";
 import "./globals.css";
-import { SliceBootScreen } from "@/components/layout/slice-boot-screen";
 import { SubscriptionsProvider } from "@/components/providers/subscriptions-provider";
 
 const sliceDisplay = Syne({
@@ -53,9 +52,7 @@ export default function RootLayout({
       <body
         className={`${sliceDisplay.variable} ${sliceSans.variable} ${sliceMono.variable} min-h-full font-sans text-fg antialiased`}
       >
-        <SubscriptionsProvider>
-          <SliceBootScreen>{children}</SliceBootScreen>
-        </SubscriptionsProvider>
+        <SubscriptionsProvider>{children}</SubscriptionsProvider>
       </body>
     </html>
   );
