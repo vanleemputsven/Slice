@@ -1,15 +1,18 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { X } from "lucide-react";
 import {
-  subscriptionFormSchema,
+  subscriptionFormSchemaForLocale,
   type SubscriptionFormInput,
   type SubscriptionRecord,
 } from "@/lib/validation/subscription";
 import { SUBSCRIPTION_CATEGORIES } from "@/lib/subscriptions/categories";
+import { subscriptionCategoryLabel } from "@/lib/i18n/category-labels";
+import { useSliceT } from "@/lib/i18n/use-slice-t";
+import { useSubscriptions } from "@/components/providers/subscriptions-provider";
 
 export type SubscriptionFormDialogProps = {
   open: boolean;
@@ -36,7 +39,7 @@ const emptyDefaults = (): SubscriptionFormInput => ({
   reviewFlag: false,
 });
 
-export function SubscriptionFormDialog({
+function SubscriptionFormDialogInner({
   open,
   onClose,
   onSubmit,
@@ -44,9 +47,14 @@ export function SubscriptionFormDialog({
   title,
 }: SubscriptionFormDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const { t, locale } = useSliceT();
+  const schema = useMemo(
+    () => subscriptionFormSchemaForLocale(locale),
+    [locale]
+  );
 
   const form = useForm<SubscriptionFormInput>({
-    resolver: zodResolver(subscriptionFormSchema),
+    resolver: zodResolver(schema),
     defaultValues: emptyDefaults(),
   });
 
@@ -104,6 +112,9 @@ export function SubscriptionFormDialog({
     return () => el.removeEventListener("cancel", onCancel);
   }, [onClose]);
 
+  const heading =
+    title ?? (initial ? t("form.editTitle") : t("form.addTitle"));
+
   return (
     <dialog
       ref={dialogRef}
@@ -122,12 +133,12 @@ export function SubscriptionFormDialog({
             id="sub-form-title"
             className="text-xl font-bold text-fg"
           >
-            {title ?? (initial ? "Edit subscription" : "Add subscription")}
+            {heading}
           </h2>
           <button
             type="button"
             className="border border-transparent p-1.5 text-muted transition-colors hover:border-border-subtle hover:bg-surface-alt hover:text-fg"
-            aria-label="Close"
+            aria-label={t("form.closeAria")}
             onClick={onClose}
           >
             <X className="size-5" />
@@ -137,7 +148,7 @@ export function SubscriptionFormDialog({
         <div className="mt-5 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block sm:col-span-2">
-              <span className="slice-label">Name</span>
+              <span className="slice-label">{t("form.name")}</span>
               <input className="slice-input" {...form.register("name")} />
               {form.formState.errors.name && (
                 <p className="mt-1 text-xs text-danger" role="alert">
@@ -146,7 +157,7 @@ export function SubscriptionFormDialog({
               )}
             </label>
             <label className="block sm:col-span-2">
-              <span className="slice-label">Provider</span>
+              <span className="slice-label">{t("form.provider")}</span>
               <input className="slice-input" {...form.register("provider")} />
               {form.formState.errors.provider && (
                 <p className="mt-1 text-xs text-danger" role="alert">
@@ -155,29 +166,29 @@ export function SubscriptionFormDialog({
               )}
             </label>
             <label className="block sm:col-span-2">
-              <span className="slice-label">Category</span>
+              <span className="slice-label">{t("form.category")}</span>
               <select className="slice-input" {...form.register("category")}>
                 {SUBSCRIPTION_CATEGORIES.map((c) => (
                   <option key={c} value={c}>
-                    {c}
+                    {subscriptionCategoryLabel(c, locale)}
                   </option>
                 ))}
               </select>
             </label>
             <label className="block">
-              <span className="slice-label">Billing cycle</span>
+              <span className="slice-label">{t("form.billingCycle")}</span>
               <select
                 className="slice-input"
                 {...form.register("billingCycle")}
               >
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-                <option value="custom">Custom (every N months)</option>
+                <option value="monthly">{t("form.billingMonthly")}</option>
+                <option value="yearly">{t("form.billingYearly")}</option>
+                <option value="custom">{t("form.billingCustom")}</option>
               </select>
             </label>
             {billingCycle === "custom" && (
               <label className="block">
-                <span className="slice-label">Every N months</span>
+                <span className="slice-label">{t("form.everyNMonths")}</span>
                 <input
                   type="number"
                   min={1}
@@ -192,7 +203,7 @@ export function SubscriptionFormDialog({
               </label>
             )}
             <label className="block">
-              <span className="slice-label">Total price (per bill)</span>
+              <span className="slice-label">{t("form.totalPrice")}</span>
               <input
                 type="number"
                 step="0.01"
@@ -207,7 +218,7 @@ export function SubscriptionFormDialog({
               )}
             </label>
             <label className="block">
-              <span className="slice-label">Currency (ISO)</span>
+              <span className="slice-label">{t("form.currencyIso")}</span>
               <input
                 className="slice-input uppercase"
                 maxLength={3}
@@ -215,7 +226,7 @@ export function SubscriptionFormDialog({
               />
             </label>
             <label className="block sm:col-span-2">
-              <span className="slice-label">Next payment</span>
+              <span className="slice-label">{t("form.nextPayment")}</span>
               <input
                 type="date"
                 className="slice-input"
@@ -230,14 +241,14 @@ export function SubscriptionFormDialog({
           </div>
 
           <fieldset className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-            <legend className="slice-label px-1">Sharing</legend>
+            <legend className="slice-label px-1">{t("form.sharingLegend")}</legend>
             <label className="mt-3 flex items-center gap-2 text-sm text-fg">
               <input type="checkbox" {...form.register("shared")} />
-              Shared with others
+              {t("form.sharedLabel")}
             </label>
             {shared && (
               <label className="mt-3 block">
-                <span className="slice-label">People splitting (incl. you)</span>
+                <span className="slice-label">{t("form.shareCount")}</span>
                 <input
                   type="number"
                   min={2}
@@ -255,15 +266,15 @@ export function SubscriptionFormDialog({
 
           <label className="flex items-center gap-2 text-sm text-fg-secondary">
             <input type="checkbox" {...form.register("active")} />
-            Active
+            {t("form.active")}
           </label>
           <label className="flex items-center gap-2 text-sm text-fg-secondary">
             <input type="checkbox" {...form.register("reviewFlag")} />
-            Flag for review (trimming candidate)
+            {t("form.reviewFlag")}
           </label>
 
           <label className="block">
-            <span className="slice-label">Notes</span>
+            <span className="slice-label">{t("form.notes")}</span>
             <textarea
               rows={3}
               className="slice-input"
@@ -279,19 +290,25 @@ export function SubscriptionFormDialog({
 
         {form.formState.errors.root && (
           <p className="mt-3 text-sm text-danger" role="alert">
-            Check highlighted fields.
+            {t("form.rootError")}
           </p>
         )}
 
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <button type="button" className="slice-btn-secondary" onClick={onClose}>
-            Cancel
+            {t("form.cancel")}
           </button>
           <button type="submit" className="slice-btn-primary">
-            Save
+            {t("form.save")}
           </button>
         </div>
       </form>
     </dialog>
   );
+}
+
+export function SubscriptionFormDialog(props: SubscriptionFormDialogProps) {
+  const { preferences } = useSubscriptions();
+  const locale = preferences.locale ?? "en";
+  return <SubscriptionFormDialogInner key={locale} {...props} />;
 }

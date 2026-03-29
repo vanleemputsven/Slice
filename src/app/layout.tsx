@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Figtree, JetBrains_Mono, Syne } from "next/font/google";
 import "./globals.css";
+import { SliceBootScreen } from "@/components/layout/slice-boot-screen";
 import { SubscriptionsProvider } from "@/components/providers/subscriptions-provider";
 
 const sliceDisplay = Syne({
@@ -32,6 +33,14 @@ export const metadata: Metadata = {
   description:
     "Track recurring spend, shared splits, and the work time your subscriptions consume.",
   applicationName: "Slice",
+  manifest: "/site.webmanifest",
+  appleWebApp: {
+    title: "Slice",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0b0c0f",
 };
 
 export default function RootLayout({
@@ -44,7 +53,9 @@ export default function RootLayout({
       <body
         className={`${sliceDisplay.variable} ${sliceSans.variable} ${sliceMono.variable} min-h-full font-sans text-fg antialiased`}
       >
-        <SubscriptionsProvider>{children}</SubscriptionsProvider>
+        <SubscriptionsProvider>
+          <SliceBootScreen>{children}</SliceBootScreen>
+        </SubscriptionsProvider>
       </body>
     </html>
   );

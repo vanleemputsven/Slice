@@ -1,3 +1,5 @@
+import type { AppLocale } from "@/lib/i18n/locale";
+import { sliceT } from "@/lib/i18n/messages";
 import type { SubscriptionRecord } from "@/lib/validation/subscription";
 import {
   getAnnualMyShare,
@@ -19,7 +21,8 @@ export type CostInsight = {
 export function buildInsights(
   subs: SubscriptionRecord[],
   now: Date = new Date(),
-  currencyCode: string = "USD"
+  currencyCode: string = "USD",
+  locale: AppLocale = "en"
 ): CostInsight[] {
   const active = subs.filter((s) => s.active);
   const insights: CostInsight[] = [];
@@ -35,16 +38,16 @@ export function buildInsights(
   );
   const topAnnual = byAnnualPersonal[0];
 
-  if (
-    topAnnual &&
-    topMonthly &&
-    topAnnual.id !== topMonthly.id
-  ) {
+  if (topAnnual && topMonthly && topAnnual.id !== topMonthly.id) {
     insights.push({
       id: "yearly-leader",
-      title: "Yearly total ≠ monthly leader",
-      description: `Highest yearly cost for you: ${topAnnual.name} (${formatCurrency(getAnnualMyShare(topAnnual), currencyCode)}/yr). Highest monthly share: ${topMonthly.name}. Annual billing often changes the order.`,
-      tip: "Open each subscription and check cycle and price if you are choosing what to cancel.",
+      title: sliceT(locale, "insights.yearlyLeader.title"),
+      description: sliceT(locale, "insights.yearlyLeader.description", {
+        annualName: topAnnual.name,
+        annualAmount: formatCurrency(getAnnualMyShare(topAnnual), currencyCode),
+        monthlyName: topMonthly.name,
+      }),
+      tip: sliceT(locale, "insights.yearlyLeader.tip"),
       variant: "accent",
     });
   }
@@ -61,9 +64,13 @@ export function buildInsights(
       );
       insights.push({
         id: "share-visibility",
-        title: "Biggest shared subscription",
-        description: `${topShared.name}: you pay ${formatCurrency(getMonthlyMyShare(topShared), currencyCode)}/mo; full bill about ${full}/mo.`,
-        tip: "Update the number of people if the split changed.",
+        title: sliceT(locale, "insights.sharedLargest.title"),
+        description: sliceT(locale, "insights.sharedLargest.description", {
+          name: topShared.name,
+          yours: formatCurrency(getMonthlyMyShare(topShared), currencyCode),
+          full,
+        }),
+        tip: sliceT(locale, "insights.sharedLargest.tip"),
         variant: "neutral",
       });
     }
@@ -71,16 +78,29 @@ export function buildInsights(
 
   const reviewCandidates = active.filter((s) => s.reviewFlag);
   if (reviewCandidates.length > 0) {
-    const names = reviewCandidates.slice(0, 3).map((s) => s.name).join(", ");
+    const names = reviewCandidates
+      .slice(0, 3)
+      .map((s) => s.name)
+      .join(", ");
     const more =
       reviewCandidates.length > 3
-        ? ` (+${reviewCandidates.length - 3} more)`
+        ? sliceT(locale, "insights.flagged.more", {
+            n: reviewCandidates.length - 3,
+          })
         : "";
+    const description =
+      reviewCandidates.length === 1
+        ? sliceT(locale, "insights.flagged.descriptionOne", { names, more })
+        : sliceT(locale, "insights.flagged.descriptionMany", {
+            count: reviewCandidates.length,
+            names,
+            more,
+          });
     insights.push({
       id: "flagged",
-      title: "Flagged for review",
-      description: `${reviewCandidates.length} item${reviewCandidates.length === 1 ? "" : "s"}: ${names}${more}.`,
-      tip: "Decide keep, downgrade, or cancel when you have a minute.",
+      title: sliceT(locale, "insights.flagged.title"),
+      description,
+      tip: sliceT(locale, "insights.flagged.tip"),
       variant: "warning",
     });
   }
@@ -94,9 +114,11 @@ export function buildInsights(
   if (soon.length >= 3) {
     insights.push({
       id: "cluster",
-      title: "Many renewals in two weeks",
-      description: `${soon.length} subscriptions have a payment in the next 14 days.`,
-      tip: "Skim the due dates so nothing hits the same day by surprise.",
+      title: sliceT(locale, "insights.cluster.title"),
+      description: sliceT(locale, "insights.cluster.description", {
+        count: soon.length,
+      }),
+      tip: sliceT(locale, "insights.cluster.tip"),
       variant: "neutral",
     });
   }

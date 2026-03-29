@@ -18,24 +18,12 @@ import {
 } from "@/lib/subscriptions/calculations";
 import { SUBSCRIPTION_CATEGORIES } from "@/lib/subscriptions/categories";
 import { formatCurrency } from "@/lib/utils/currency";
+import { subscriptionCategoryLabel } from "@/lib/i18n/category-labels";
+import { sliceDateLocale } from "@/lib/i18n/locale";
+import { useSliceT } from "@/lib/i18n/use-slice-t";
 
 type SortKey = "cost" | "next" | "name" | "category";
 type FilterShared = "all" | "shared" | "solo";
-
-function cycleLabel(
-  s: SubscriptionRecord
-): string {
-  switch (s.billingCycle) {
-    case "monthly":
-      return "Monthly";
-    case "yearly":
-      return "Yearly";
-    case "custom":
-      return `Every ${s.customPeriodMonths ?? "?"} mo`;
-    default:
-      return "";
-  }
-}
 
 function tabClass(active: boolean) {
   return `shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
@@ -48,6 +36,8 @@ function tabClass(active: boolean) {
 export function SubscriptionsClient() {
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("highlight");
+  const { t, locale } = useSliceT();
+  const dateLoc = sliceDateLocale(locale);
 
   const {
     ready,
@@ -59,6 +49,21 @@ export function SubscriptionsClient() {
     resetToDemo,
     clearAll,
   } = useSubscriptions();
+
+  const billingLabel = (s: SubscriptionRecord) => {
+    switch (s.billingCycle) {
+      case "monthly":
+        return t("subs.billingMonthly");
+      case "yearly":
+        return t("subs.billingYearly");
+      case "custom":
+        return t("subs.billingCustom", {
+          months: s.customPeriodMonths ?? "?",
+        });
+      default:
+        return "";
+    }
+  };
 
   const [sort, setSort] = useState<SortKey>("next");
   const [filterCategory, setFilterCategory] = useState<string>("all");
@@ -116,15 +121,14 @@ export function SubscriptionsClient() {
   }
 
   return (
-    <div className="animate-slice-in space-y-8">
+    <div className="space-y-8">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold leading-tight tracking-tight text-fg sm:text-4xl">
-            Subscriptions
+            {t("subs.title")}
           </h1>
           <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-fg-secondary">
-            Full price, your share of shared plans, billing cycle, and next
-            payment date.
+            {t("subs.subtitle")}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -137,7 +141,7 @@ export function SubscriptionsClient() {
             }}
           >
             <Plus className="size-4" aria-hidden />
-            Add
+            {t("subs.add")}
           </button>
           <button
             type="button"
@@ -145,7 +149,7 @@ export function SubscriptionsClient() {
             onClick={() => resetToDemo()}
           >
             <RotateCcw className="size-4" aria-hidden />
-            Load demo
+            {t("subs.loadDemo")}
           </button>
           <button
             type="button"
@@ -153,13 +157,13 @@ export function SubscriptionsClient() {
             onClick={() => {
               if (
                 typeof window !== "undefined" &&
-                window.confirm("Clear all subscriptions and preferences on this device?")
+                window.confirm(t("subs.clearConfirm"))
               ) {
                 clearAll();
               }
             }}
           >
-            Clear data
+            {t("subs.clearData")}
           </button>
         </div>
       </header>
@@ -179,11 +183,8 @@ export function SubscriptionsClient() {
 
       {subscriptions.length === 0 ? (
         <div className="slice-card border-dashed border-border-subtle p-10 text-center">
-          <p className="text-lg font-bold text-fg">No subscriptions yet</p>
-          <p className="mt-2 text-sm text-muted">
-            Add a subscription to get started, or load sample data to preview
-            the dashboard.
-          </p>
+          <p className="text-lg font-bold text-fg">{t("subs.emptyTitle")}</p>
+          <p className="mt-2 text-sm text-muted">{t("subs.emptyHint")}</p>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             <button
               type="button"
@@ -193,14 +194,14 @@ export function SubscriptionsClient() {
                 setFormOpen(true);
               }}
             >
-              Add subscription
+              {t("subs.addSubscription")}
             </button>
             <button
               type="button"
               className="slice-btn-secondary"
               onClick={() => resetToDemo()}
             >
-              Load demo set
+              {t("subs.loadDemoSet")}
             </button>
           </div>
         </div>
@@ -209,17 +210,17 @@ export function SubscriptionsClient() {
           <div
             className="space-y-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 sm:p-5"
             role="region"
-            aria-label="Filter and sort subscriptions"
+            aria-label={t("subs.filterRegion")}
           >
             <div>
-              <p className="text-xs font-semibold text-muted">Category</p>
+              <p className="text-xs font-semibold text-muted">{t("subs.category")}</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <button
                   type="button"
                   className={tabClass(filterCategory === "all")}
                   onClick={() => setFilterCategory("all")}
                 >
-                  All
+                  {t("subs.all")}
                 </button>
                 {SUBSCRIPTION_CATEGORIES.map((c) => (
                   <button
@@ -228,17 +229,17 @@ export function SubscriptionsClient() {
                     className={tabClass(filterCategory === c)}
                     onClick={() => setFilterCategory(c)}
                   >
-                    {c}
+                    {subscriptionCategoryLabel(c, locale)}
                   </button>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-xs font-semibold text-muted">Sharing</p>
+              <p className="text-xs font-semibold text-muted">{t("subs.sharing")}</p>
               <div
                 className="mt-2 flex flex-wrap gap-1.5"
                 role="tablist"
-                aria-label="Sharing filter"
+                aria-label={t("subs.sharingAria")}
               >
                 <button
                   type="button"
@@ -247,7 +248,7 @@ export function SubscriptionsClient() {
                   className={tabClass(filterShared === "all")}
                   onClick={() => setFilterShared("all")}
                 >
-                  All
+                  {t("subs.all")}
                 </button>
                 <button
                   type="button"
@@ -256,7 +257,7 @@ export function SubscriptionsClient() {
                   className={tabClass(filterShared === "shared")}
                   onClick={() => setFilterShared("shared")}
                 >
-                  Shared
+                  {t("subs.shared")}
                 </button>
                 <button
                   type="button"
@@ -265,25 +266,25 @@ export function SubscriptionsClient() {
                   className={tabClass(filterShared === "solo")}
                   onClick={() => setFilterShared("solo")}
                 >
-                  Not shared
+                  {t("subs.notShared")}
                 </button>
               </div>
             </div>
             <div>
-              <p className="text-xs font-semibold text-muted">Sort by</p>
+              <p className="text-xs font-semibold text-muted">{t("subs.sortBy")}</p>
               <div
                 className="mt-2 flex flex-wrap gap-1.5"
                 role="tablist"
-                aria-label="Sort order"
+                aria-label={t("subs.sortAria")}
               >
                 {(
                   [
-                    ["next", "Next payment"],
-                    ["cost", "Your cost"],
-                    ["name", "Name"],
-                    ["category", "Category"],
+                    ["next", "subs.sortNext"],
+                    ["cost", "subs.sortCost"],
+                    ["name", "subs.sortName"],
+                    ["category", "subs.sortCategory"],
                   ] as const
-                ).map(([key, label]) => (
+                ).map(([key, labelKey]) => (
                   <button
                     key={key}
                     type="button"
@@ -292,7 +293,7 @@ export function SubscriptionsClient() {
                     className={tabClass(sort === key)}
                     onClick={() => setSort(key)}
                   >
-                    {label}
+                    {t(labelKey)}
                   </button>
                 ))}
               </div>
@@ -304,18 +305,18 @@ export function SubscriptionsClient() {
               <table className="min-w-full text-left text-sm">
                 <thead className="border-b border-white/[0.06] bg-white/[0.02] text-xs font-semibold text-muted">
                   <tr>
-                    <th className="px-4 py-3.5 font-medium">Service</th>
-                    <th className="px-4 py-3.5 font-medium">Category</th>
-                    <th className="px-4 py-3.5 font-medium">Billing</th>
+                    <th className="px-4 py-3.5 font-medium">{t("subs.colService")}</th>
+                    <th className="px-4 py-3.5 font-medium">{t("subs.colCategory")}</th>
+                    <th className="px-4 py-3.5 font-medium">{t("subs.colBilling")}</th>
                     <th className="px-4 py-3.5 font-medium tabular-nums">
-                      Full / mo
+                      {t("subs.colFullMo")}
                     </th>
                     <th className="px-4 py-3.5 font-medium tabular-nums">
-                      Yours / mo
+                      {t("subs.colYoursMo")}
                     </th>
-                    <th className="px-4 py-3.5 font-medium">Next</th>
-                    <th className="px-4 py-3.5 font-medium">Split</th>
-                    <th className="px-4 py-3 font-medium sr-only">Actions</th>
+                    <th className="px-4 py-3.5 font-medium">{t("subs.colNext")}</th>
+                    <th className="px-4 py-3.5 font-medium">{t("subs.colSplit")}</th>
+                    <th className="px-4 py-3 font-medium sr-only">{t("subs.colActions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -342,7 +343,7 @@ export function SubscriptionsClient() {
                                 {s.name}
                                 {!s.active && (
                                   <span className="ml-2 text-xs font-normal text-muted">
-                                    (inactive)
+                                    {t("subs.inactive")}
                                   </span>
                                 )}
                               </p>
@@ -351,7 +352,7 @@ export function SubscriptionsClient() {
                                 <p className="mt-1 text-[11px] text-fg-secondary">
                                   {s.reviewFlag && (
                                     <span className="mr-2 rounded-full bg-warning/15 px-2 py-0.5 text-[11px] font-semibold text-warning">
-                                      Review
+                                      {t("subs.reviewBadge")}
                                     </span>
                                   )}
                                   {s.notes}
@@ -360,9 +361,11 @@ export function SubscriptionsClient() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-fg-secondary">{s.category}</td>
                         <td className="px-4 py-3 text-fg-secondary">
-                          {cycleLabel(s)}
+                          {subscriptionCategoryLabel(s.category, locale)}
+                        </td>
+                        <td className="px-4 py-3 text-fg-secondary">
+                          {billingLabel(s)}
                         </td>
                         <td className="px-4 py-3 font-mono tabular-nums text-fg-secondary">
                           {formatCurrency(getMonthlyTotalPrice(s), cur)}
@@ -371,12 +374,16 @@ export function SubscriptionsClient() {
                           {formatCurrency(getMonthlyMyShare(s), cur)}
                         </td>
                         <td className={`px-4 py-3 tabular-nums ${soon}`}>
-                          {next.toLocaleDateString("en-US", {
+                          {next.toLocaleDateString(dateLoc, {
                             month: "short",
                             day: "numeric",
                           })}
                           <span className="ml-1 text-xs text-muted">
-                            ({d < 0 ? "past" : `${d}d`})
+                            (
+                            {d < 0
+                              ? t("subs.past")
+                              : t("subs.daysSuffix", { days: d })}
+                            )
                           </span>
                         </td>
                         <td className="px-4 py-3">
@@ -394,7 +401,7 @@ export function SubscriptionsClient() {
                             <button
                               type="button"
                               className="rounded-lg p-2 text-muted hover:bg-surface-alt hover:text-fg"
-                              aria-label={`Edit ${s.name}`}
+                              aria-label={t("subs.editAria", { name: s.name })}
                               onClick={() => {
                                 setEditing(s);
                                 setFormOpen(true);
@@ -405,11 +412,13 @@ export function SubscriptionsClient() {
                             <button
                               type="button"
                               className="border border-transparent p-2 text-muted hover:border-danger/30 hover:bg-danger/10 hover:text-danger"
-                              aria-label={`Delete ${s.name}`}
+                              aria-label={t("subs.deleteAria", { name: s.name })}
                               onClick={() => {
                                 if (
                                   typeof window !== "undefined" &&
-                                  window.confirm(`Delete ${s.name}?`)
+                                  window.confirm(
+                                    t("subs.deleteConfirm", { name: s.name })
+                                  )
                                 ) {
                                   deleteSubscription(s.id);
                                 }

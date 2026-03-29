@@ -1,25 +1,27 @@
 "use client";
 
 import type { CostInsight } from "@/lib/subscriptions/insights";
+import { useSliceT } from "@/lib/i18n/use-slice-t";
 
 function VariantLabel({ variant }: { variant: CostInsight["variant"] }) {
+  const { t } = useSliceT();
   if (variant === "warning") {
     return (
       <span className="text-[11px] font-medium uppercase tracking-wide text-warning">
-        Review
+        {t("insights.badgeReview")}
       </span>
     );
   }
   if (variant === "accent") {
     return (
       <span className="text-[11px] font-medium uppercase tracking-wide text-accent-bright">
-        Compare
+        {t("insights.badgeCompare")}
       </span>
     );
   }
   return (
     <span className="text-[11px] font-medium uppercase tracking-wide text-muted">
-      Info
+      {t("insights.badgeInfo")}
     </span>
   );
 }
@@ -31,6 +33,7 @@ export function DashboardInsights({
   items: CostInsight[];
   embedded?: boolean;
 }) {
+  const { t } = useSliceT();
   if (items.length === 0) return null;
 
   return (
@@ -42,11 +45,9 @@ export function DashboardInsights({
         id="insights-heading"
         className="text-base font-semibold text-fg sm:text-lg"
       >
-        Short notes
+        {t("insights.heading")}
       </h2>
-      <p className="mt-1 text-xs text-muted">
-        Active subscriptions; based on what you entered.
-      </p>
+      <p className="mt-1 text-xs text-muted">{t("insights.hint")}</p>
 
       <ol className="mt-5 list-none space-y-0 divide-y divide-white/[0.07] border-t border-white/[0.07]">
         {items.map((i, index) => (

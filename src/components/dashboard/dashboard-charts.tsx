@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { SliceMessageKey } from "@/lib/i18n/messages";
+import { useSliceT } from "@/lib/i18n/use-slice-t";
 import {
   Bar,
   BarChart,
@@ -14,6 +16,8 @@ import {
   YAxis,
 } from "recharts";
 import type { SubscriptionRecord } from "@/lib/validation/subscription";
+import type { SubscriptionCategory } from "@/lib/subscriptions/categories";
+import { subscriptionCategoryLabel } from "@/lib/i18n/category-labels";
 import {
   CHART_AXIS_MUTED,
   CHART_GRID_STROKE,
@@ -34,6 +38,8 @@ function ChartTooltip({
   label,
   currency,
   formatter,
+  t,
+  formatTitle,
 }: {
   active?: boolean;
   payload?: Array<{
@@ -44,15 +50,18 @@ function ChartTooltip({
   label?: string | number;
   currency: string;
   formatter?: (value: number, payload: Record<string, unknown>) => string;
+  t: (key: SliceMessageKey, vars?: Record<string, string | number>) => string;
+  formatTitle?: (raw: string) => string;
 }) {
   if (!active || !payload?.length) return null;
   const item = payload[0];
   const v = typeof item.value === "number" ? item.value : 0;
   const p = (item.payload ?? {}) as Record<string, unknown>;
-  const title =
+  const rawTitle =
     (typeof p.name === "string" ? p.name : null) ??
     (typeof label === "string" ? label : null) ??
     (typeof item.name === "string" ? item.name : "—");
+  const title = formatTitle ? formatTitle(String(rawTitle)) : String(rawTitle);
   const text = formatter ? formatter(v, p) : formatCurrency(v, currency);
   return (
     <div className="rounded-md bg-[rgb(20_22_28/0.96)] px-2.5 py-2 text-xs shadow-lg ring-1 ring-accent/25">
@@ -60,7 +69,9 @@ function ChartTooltip({
       <p className="mt-0.5 font-mono tabular-nums text-accent-bright">{text}</p>
       {typeof p.fullMonthly === "number" && p.shared === true ? (
         <p className="mt-1 text-[11px] text-muted">
-          Full {formatCurrency(p.fullMonthly as number, currency)}/mo
+          {t("charts.tooltipFullMo", {
+            amount: formatCurrency(p.fullMonthly as number, currency),
+          })}
         </p>
       ) : null}
     </div>
@@ -71,6 +82,7 @@ export function DashboardCharts({
   subscriptions,
   currency,
 }: DashboardChartsProps) {
+  const { t, locale } = useSliceT();
   const categories = useMemo(
     () => spendByCategory(subscriptions),
     [subscriptions]
@@ -98,30 +110,32 @@ export function DashboardCharts({
 
   if (!hasActiveSubs) {
     return (
-      <section aria-label="Charts" className="slice-card px-5 py-6 sm:px-6">
-        <h2 className="text-base font-semibold text-fg">Spending</h2>
-        <p className="mt-2 text-sm text-muted">
-          Add subscriptions for category split and ranking.
-        </p>
+      <section aria-label={t("charts.title")} className="slice-card px-5 py-6 sm:px-6">
+        <h2 className="text-base font-semibold text-fg">{t("charts.title")}</h2>
+        <p className="mt-2 text-sm text-muted">{t("charts.emptyHint")}</p>
       </section>
     );
   }
 
   return (
-    <section aria-label="Spending charts" className="slice-card overflow-hidden">
+    <section aria-label={t("charts.aria")} className="slice-card overflow-hidden">
       <div className="border-b border-white/[0.07] px-5 py-5 sm:px-6">
-        <h2 className="text-base font-semibold text-fg">Spending</h2>
-        <p className="mt-1 text-sm text-muted">
-          By category and by line item. Percent = share of your monthly total.
-        </p>
+        <h2 className="text-base font-semibold text-fg">{t("charts.title")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("charts.subtitle")}</p>
       </div>
 
-      <div className="grid lg:grid-cols-2 lg:divide-x lg:divide-white/[0.07]">
-        <div className="px-5 py-5 sm:px-6">
-          <h3 className="mt-0 text-sm font-medium text-fg">Category</h3>
-          <div className="mt-2 h-[248px] w-full min-h-[220px]">
+      <div className="grid min-w-0 lg:grid-cols-2 lg:divide-x lg:divide-white/[0.07]">
+        <div className="min-w-0 px-5 py-5 sm:px-6">
+          <h3 className="mt-0 text-sm font-medium text-fg">{t("charts.category")}</h3>
+          <div className="relative mt-2 h-[248px] w-full min-h-[220px] min-w-0">
             {hasPie ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
+                  minWidth={0}
+                  minHeight={0}
+                  initialDimension={{ width: 400, height: 248 }}
+                >
                   <PieChart margin={{ top: 8, bottom: 8 }}>
                     <Pie
                       data={pieData}
@@ -160,7 +174,14 @@ export function DashboardCharts({
                     <Tooltip
                       content={
                         <ChartTooltip
+                          t={t}
                           currency={currency}
+                          formatTitle={(name) =>
+                            subscriptionCategoryLabel(
+                              name as SubscriptionCategory,
+                              locale
+                            )
+                          }
                           formatter={(v, pl) => {
                             const pct = pl.percent as number | undefined;
                             return `${formatCurrency(v, currency)}/mo${pct != null ? ` · ${pct}%` : ""}`;
@@ -172,7 +193,7 @@ export function DashboardCharts({
                 </ResponsiveContainer>
             ) : (
               <p className="flex h-full items-center justify-center text-sm text-muted">
-                No data.
+                {t("charts.noData")}
               </p>
             )}
           </div>
@@ -197,7 +218,12 @@ export function DashboardCharts({
                       }}
                       aria-hidden
                     />
-                    <span>{d.name}</span>
+                    <span>
+                      {subscriptionCategoryLabel(
+                        d.name as SubscriptionCategory,
+                        locale
+                      )}
+                    </span>
                     <span className="font-mono text-muted">{d.percent}%</span>
                   </button>
                 </li>
@@ -206,11 +232,17 @@ export function DashboardCharts({
           ) : null}
         </div>
 
-        <div className="px-5 py-5 sm:px-6">
-          <h3 className="text-sm font-medium text-fg">Ranking (your share)</h3>
-          <div className="mt-2 h-[268px] w-full min-h-[240px]">
+        <div className="min-w-0 px-5 py-5 sm:px-6">
+          <h3 className="text-sm font-medium text-fg">{t("charts.ranking")}</h3>
+          <div className="relative mt-2 h-[268px] w-full min-h-[240px] min-w-0">
             {hasBars ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+                minWidth={0}
+                minHeight={0}
+                initialDimension={{ width: 400, height: 268 }}
+              >
                 <BarChart
                   layout="vertical"
                   data={topSpend}
@@ -240,11 +272,17 @@ export function DashboardCharts({
                     cursor={{ fill: "rgb(255 88 77 / 0.06)" }}
                     content={
                       <ChartTooltip
+                        t={t}
                         currency={currency}
                         formatter={(v, pl) => {
                           const full = pl.fullMonthly as number;
                           const sh = pl.shared as boolean;
-                          return `${formatCurrency(v, currency)}/mo${sh ? ` · full ${formatCurrency(full, currency)}` : ""}`;
+                          const yours = `${formatCurrency(v, currency)}/mo`;
+                          return sh
+                            ? `${yours}${t("charts.barTooltipFullPart", {
+                                full: formatCurrency(full, currency),
+                              })}`
+                            : yours;
                         }}
                       />
                     }
@@ -267,7 +305,7 @@ export function DashboardCharts({
               </ResponsiveContainer>
             ) : (
               <p className="flex h-full items-center justify-center text-sm text-muted">
-                No data.
+                {t("charts.noData")}
               </p>
             )}
           </div>

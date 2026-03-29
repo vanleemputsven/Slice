@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { CHART_SEGMENT_COLORS } from "@/lib/subscriptions/chart-data";
 import { getMonthlyMyShare } from "@/lib/subscriptions/calculations";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { SubscriptionRecord } from "@/lib/validation/subscription";
+import { useSliceT } from "@/lib/i18n/use-slice-t";
 
 type Row = {
   id: string;
@@ -25,6 +26,7 @@ export function MonthlyShareExplorer({
   subscriptions,
   currency,
 }: MonthlyShareExplorerProps) {
+  const { t } = useSliceT();
   const reduceMotion = useReducedMotion();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -51,10 +53,16 @@ export function MonthlyShareExplorer({
     [rows]
   );
 
-  const selected = selectedId
-    ? rows.find((r) => r.id === selectedId)
+  const selectedIdResolved =
+    selectedId != null && rows.some((r) => r.id === selectedId)
+      ? selectedId
+      : null;
+
+  const selected = selectedIdResolved
+    ? rows.find((r) => r.id === selectedIdResolved)
     : null;
-  const highlightedId = selectedId != null ? selectedId : hoveredId;
+  const highlightedId =
+    selectedIdResolved != null ? selectedIdResolved : hoveredId;
 
   const afterRemove = selected ? total - selected.share : null;
   const savings = selected ? selected.share : null;
@@ -69,12 +77,6 @@ export function MonthlyShareExplorer({
     return c;
   }, [rows, total]);
 
-  useEffect(() => {
-    if (selectedId && !rows.some((r) => r.id === selectedId)) {
-      setSelectedId(null);
-    }
-  }, [rows, selectedId]);
-
   if (rows.length === 0) {
     return (
       <section
@@ -85,16 +87,16 @@ export function MonthlyShareExplorer({
           id="slice-explorer-empty"
           className="text-base font-semibold text-fg sm:text-lg"
         >
-          No subscriptions
+          {t("explorer.emptyTitle")}
         </h2>
         <p className="mt-2 max-w-md text-sm text-muted">
-          Add at least one active subscription to see your monthly total here.
+          {t("explorer.emptyHint")}
         </p>
         <Link
           href="/subscriptions"
           className="slice-btn-primary mt-4 inline-flex text-sm"
         >
-          Subscriptions
+          {t("explorer.emptyCta")}
           <ArrowRight className="size-4" aria-hidden />
         </Link>
       </section>
@@ -109,31 +111,28 @@ export function MonthlyShareExplorer({
             id="slice-explorer-title"
             className="text-xs font-medium text-muted"
           >
-            Monthly total (your share)
+            {t("explorer.monthlyTitle")}
           </p>
           <p className="mt-1 font-mono text-3xl font-semibold tabular-nums tracking-tight text-fg sm:text-4xl">
             {formatCurrency(total, currency)}
             <span className="ml-2 text-lg font-normal text-fg-secondary sm:text-xl">
-              / mo
+              {t("explorer.perMo")}
             </span>
           </p>
-          <p className="mt-2 max-w-lg text-sm text-muted">
-            Bar = share per subscription. Hover to emphasize; click to pin and
-            see the total if you remove that line.
-          </p>
+          <p className="mt-2 max-w-lg text-sm text-muted">{t("explorer.intro")}</p>
         </div>
       </div>
 
       <div
         className="mt-6 overflow-hidden rounded-lg bg-white/[0.03]"
-        aria-label="Subscription shares as proportion of monthly total"
+        aria-label={t("explorer.barAria")}
       >
         <div className="relative flex h-12 w-full sm:h-14">
           {rows.map((r, i) => {
             const pct = total > 0 ? (r.share / total) * 100 : 0;
             const left = leftPct[i] ?? 0;
             const isOn = highlightedId === r.id;
-            const isSel = selectedId === r.id;
+            const isSel = selectedIdResolved === r.id;
             const dimOthers = highlightedId != null;
 
             return (
@@ -187,8 +186,11 @@ export function MonthlyShareExplorer({
                 }
               >
                 <span className="sr-only">
-                  {r.name}, {formatCurrency(r.share, currency)} per month,{" "}
-                  {pct.toFixed(1)} percent
+                  {t("explorer.srSegment", {
+                    name: r.name,
+                    amount: formatCurrency(r.share, currency),
+                    pct: pct.toFixed(1),
+                  })}
                 </span>
               </motion.button>
             );
@@ -208,7 +210,9 @@ export function MonthlyShareExplorer({
           </li>
         ))}
         {rows.length > 12 ? (
-          <li className="text-muted">+{rows.length - 12}</li>
+          <li className="text-muted">
+            {t("explorer.more", { count: rows.length - 12 })}
+          </li>
         ) : null}
       </ul>
 
@@ -271,7 +275,7 @@ export function MonthlyShareExplorer({
               exit={{ opacity: 0 }}
               className="text-sm text-muted"
             >
-              Click a segment to pin it.
+              {t("explorer.clickHint")}
             </motion.p>
           )}
         </AnimatePresence>

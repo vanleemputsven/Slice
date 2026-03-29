@@ -5,9 +5,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutGrid, List } from "lucide-react";
 import { SliceMark } from "@/components/brand/slice-mark";
+import { LanguageToggle } from "@/components/layout/language-toggle";
+import { HEADER_CONTROL_SHELL } from "@/components/layout/header-controls";
+import { useSliceT } from "@/lib/i18n/use-slice-t";
 
 export function AppHeader() {
   const pathname = usePathname();
+  const { t } = useSliceT();
 
   const item = (href: string, label: string, icon: ReactNode) => {
     const active =
@@ -30,27 +34,27 @@ export function AppHeader() {
   return (
     <header className="slice-header-shell sticky top-0 z-20">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-        <Link href="/dashboard" className="shrink-0" aria-label="Slice home">
+        <Link href="/dashboard" className="shrink-0" aria-label={t("header.homeAria")}>
           <SliceMark />
         </Link>
-        <p className="order-3 hidden max-w-xs text-[13px] leading-snug text-muted sm:order-none sm:block">
-          Less overlap, honest splits, real hours.
-        </p>
-        <nav
-          className="flex items-center gap-1 rounded-full bg-white/[0.03] p-1 ring-1 ring-white/[0.06]"
-          aria-label="Main"
-        >
-          {item(
-            "/dashboard",
-            "Overview",
-            <LayoutGrid className="size-4" aria-hidden />
-          )}
-          {item(
-            "/subscriptions",
-            "Subscriptions",
-            <List className="size-4" aria-hidden />
-          )}
-        </nav>
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <nav
+            className={`flex items-center gap-1 ${HEADER_CONTROL_SHELL}`}
+            aria-label={t("header.navMain")}
+          >
+            {item(
+              "/dashboard",
+              t("header.navOverview"),
+              <LayoutGrid className="size-4" aria-hidden />
+            )}
+            {item(
+              "/subscriptions",
+              t("header.navSubscriptions"),
+              <List className="size-4" aria-hidden />
+            )}
+          </nav>
+          <LanguageToggle />
+        </div>
       </div>
     </header>
   );

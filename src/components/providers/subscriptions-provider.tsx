@@ -24,6 +24,7 @@ import {
   savePreferences,
   saveSubscriptions,
 } from "@/lib/storage/slice-storage";
+import { appLocaleSchema, type AppLocale } from "@/lib/i18n/locale";
 
 type SubscriptionsContextValue = {
   ready: boolean;
@@ -32,6 +33,7 @@ type SubscriptionsContextValue = {
   setHourlyWage: (value: number | null) => void;
   setHoursPerWorkday: (value: number) => void;
   setCurrency: (code: string) => void;
+  setLocale: (locale: AppLocale) => void;
   addSubscription: (input: SubscriptionFormInput) => void;
   updateSubscription: (id: string, input: SubscriptionFormInput) => void;
   deleteSubscription: (id: string) => void;
@@ -51,6 +53,7 @@ function normalizePrefs(input: unknown): Preferences {
     hourlyWage: null,
     hoursPerWorkday: 8,
     currency: "USD",
+    locale: "en",
   };
 }
 
@@ -80,6 +83,7 @@ export function SubscriptionsProvider({
     hourlyWage: null,
     hoursPerWorkday: 8,
     currency: "USD",
+    locale: "en",
   });
 
   /* One-shot client hydration from localStorage (no window on server). */
@@ -101,6 +105,11 @@ export function SubscriptionsProvider({
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.lang = preferences.locale === "nl" ? "nl" : "en";
+  }, [preferences.locale]);
+
+  useEffect(() => {
     if (!ready) return;
     saveSubscriptions(subscriptions);
   }, [subscriptions, ready]);
@@ -120,6 +129,12 @@ export function SubscriptionsProvider({
 
   const setCurrency = useCallback((code: string) => {
     setPreferencesState((p) => ({ ...p, currency: code.slice(0, 3).toUpperCase() }));
+  }, []);
+
+  const setLocale = useCallback((locale: AppLocale) => {
+    const next = appLocaleSchema.safeParse(locale);
+    if (!next.success) return;
+    setPreferencesState((p) => ({ ...p, locale: next.data }));
   }, []);
 
   const addSubscription = useCallback((input: SubscriptionFormInput) => {
@@ -161,6 +176,7 @@ export function SubscriptionsProvider({
       hourlyWage: null,
       hoursPerWorkday: 8,
       currency: "USD",
+      locale: "en",
     });
   }, []);
 
@@ -172,6 +188,7 @@ export function SubscriptionsProvider({
       setHourlyWage,
       setHoursPerWorkday,
       setCurrency,
+      setLocale,
       addSubscription,
       updateSubscription,
       deleteSubscription,
@@ -186,6 +203,7 @@ export function SubscriptionsProvider({
       setHourlyWage,
       setHoursPerWorkday,
       setCurrency,
+      setLocale,
       addSubscription,
       updateSubscription,
       deleteSubscription,

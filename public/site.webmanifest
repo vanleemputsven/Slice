@@ -1,0 +1,24 @@
+{
+  "name": "Slice — Subscription clarity",
+  "short_name": "Slice",
+  "description": "Track recurring spend, shared splits, and the work time your subscriptions consume.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b0c0f",
+  "theme_color": "#0b0c0f",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
