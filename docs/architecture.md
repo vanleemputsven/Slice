@@ -19,6 +19,8 @@
 - Subscriptions are **normalized records** (`SubscriptionRecord`); monthly burn uses **cycle normalization** (monthly / yearly / N-month custom) before share-splitting.
 - **Share-Check**: when `shared` is true, `shareCount` is people in the split (including the user); personal monthly share is `(monthly total) / shareCount`.
 - **Persistence**: `subscriptions` and `user_preferences` tables in Postgres. A **trigger** on `auth.users` inserts a default `user_preferences` row for new sign-ups. New accounts start with **no subscriptions** (demo data is opt-in via “sample data” in the UI).
+- **Server hydration**: `loadAuthenticatedSlice()` in the root layout reads the same slice the client would fetch (`getUser` + RLS-scoped rows) and passes it into `SubscriptionsProvider`, so **locale, currency, and subscription rows** match the database on first paint; the client still refreshes in the background after auth resolves.
+- **First-run welcome** (`/welcome`): New preference columns `preferred_name` (optional) and `welcome_completed_at` gate access to `/dashboard` and `/subscriptions` until the user **saves** or **skips** (middleware checks the flag). Existing users were backfilled with `welcome_completed_at` set so they are not interrupted. Copy and UI mirror the login card for consistency.
 
 ## Security notes
 
@@ -34,7 +36,7 @@
 ## Supabase project checklist
 
 1. Create a project and copy **URL** + **publishable/anon** key into `.env.local` (see `.env.example`).
-2. Run the SQL in `supabase/migrations/20260329120000_slice_initial.sql` (SQL Editor or `supabase db push`).
+2. Run the SQL in `supabase/migrations/` in order (initial schema, then `20260330120000_user_preferences_welcome.sql` for the welcome step), via SQL Editor or `supabase db push`.
 3. **Authentication → URL configuration**: add redirect URLs `http://localhost:3000/auth/callback` and your production `/auth/callback`.
 4. If the trigger fails to create with `execute function`, use `execute procedure public.handle_new_user();` for older Postgres builds.
 

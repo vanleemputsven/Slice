@@ -70,13 +70,13 @@ export function TopCostFocus({
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-white/[0.06] pb-3">
           <span className="text-muted">{t("topCost.youPayMo")}</span>
           <span className="font-mono text-lg font-semibold tabular-nums text-fg">
-            {formatCurrency(monthlyYours, currency)}
+            {formatCurrency(monthlyYours, currency, dateLoc)}
           </span>
         </div>
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-white/[0.06] pb-3">
           <span className="text-muted">{t("topCost.fullPlan")}</span>
           <span className="font-mono text-base font-medium tabular-nums text-fg-secondary">
-            {formatCurrency(monthlyFull, currency)}
+            {formatCurrency(monthlyFull, currency, dateLoc)}
           </span>
         </div>
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-white/[0.06] pb-3">
@@ -98,10 +98,10 @@ export function TopCostFocus({
             {s.shared
               ? t("topCost.sharingSplit", {
                   count: String(s.shareCount ?? "—"),
-                  amount: formatCurrency(getAnnualMyShare(s), currency),
+                  amount: formatCurrency(getAnnualMyShare(s), currency, dateLoc),
                 })
               : t("topCost.soloYear", {
-                  amount: formatCurrency(getAnnualMyShare(s), currency),
+                  amount: formatCurrency(getAnnualMyShare(s), currency, dateLoc),
                 })}
           </span>
         </div>

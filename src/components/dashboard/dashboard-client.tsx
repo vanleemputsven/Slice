@@ -170,12 +170,12 @@ export function DashboardClient() {
               <span className="slice-label">{t("dashboard.statMonthYours")}</span>
             </div>
             <p className="mt-3 font-mono text-2xl font-semibold tabular-nums tracking-tight text-fg sm:text-3xl">
-              {formatCurrency(summary.monthlyMyShare, cur)}
+              {formatCurrency(summary.monthlyMyShare, cur, dateLoc)}
             </p>
             <p className="mt-1 text-xs text-muted">
               {t("dashboard.statFullPlans")}{" "}
               <span className="tabular-nums text-fg-secondary">
-                {formatCurrency(summary.monthlyFullTotal, cur)}
+                {formatCurrency(summary.monthlyFullTotal, cur, dateLoc)}
               </span>
               {t("dashboard.statPerMo")}
             </p>
@@ -187,7 +187,7 @@ export function DashboardClient() {
               <span className="slice-label">{t("dashboard.statYearYours")}</span>
             </div>
             <p className="mt-3 font-mono text-2xl font-semibold tabular-nums tracking-tight text-fg sm:text-3xl">
-              {formatCurrency(summary.yearlyMyShare, cur)}
+              {formatCurrency(summary.yearlyMyShare, cur, dateLoc)}
             </p>
             <p className="mt-1 text-xs text-muted">{t("dashboard.statYearlyHint")}</p>
           </article>
@@ -383,7 +383,7 @@ export function DashboardClient() {
                         </p>
                       </div>
                       <p className="shrink-0 text-sm tabular-nums text-accent-bright">
-                        {formatCurrency(getMonthlyMyShare(sub), cur)}
+                        {formatCurrency(getMonthlyMyShare(sub), cur, dateLoc)}
                       </p>
                     </li>
                   );

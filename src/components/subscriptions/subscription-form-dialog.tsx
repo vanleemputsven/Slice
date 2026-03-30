@@ -22,7 +22,7 @@ export type SubscriptionFormDialogProps = {
   title?: string;
 };
 
-const emptyDefaults = (): SubscriptionFormInput => ({
+const emptyDefaults = (currencyCode: string): SubscriptionFormInput => ({
   name: "",
   provider: "",
   iconKey: "",
@@ -30,7 +30,7 @@ const emptyDefaults = (): SubscriptionFormInput => ({
   billingCycle: "monthly",
   customPeriodMonths: undefined,
   totalPrice: 9.99,
-  currency: "USD",
+  currency: currencyCode.slice(0, 3).toUpperCase(),
   shared: false,
   shareCount: undefined,
   nextPaymentDate: new Date().toISOString().slice(0, 10),
@@ -48,6 +48,8 @@ function SubscriptionFormDialogInner({
 }: SubscriptionFormDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const { t, locale } = useSliceT();
+  const { preferences } = useSubscriptions();
+  const defaultRowCurrency = preferences.currency ?? "USD";
   const schema = useMemo(
     () => subscriptionFormSchemaForLocale(locale),
     [locale]
@@ -55,7 +57,7 @@ function SubscriptionFormDialogInner({
 
   const form = useForm<SubscriptionFormInput>({
     resolver: zodResolver(schema),
-    defaultValues: emptyDefaults(),
+    defaultValues: emptyDefaults(defaultRowCurrency),
   });
 
   const billingCycle = useWatch({
@@ -94,12 +96,12 @@ function SubscriptionFormDialogInner({
               active: initial.active,
               reviewFlag: initial.reviewFlag ?? false,
             }
-          : emptyDefaults()
+          : emptyDefaults(defaultRowCurrency)
       );
     } else if (el.open) {
       el.close();
     }
-  }, [open, initial, form]);
+  }, [open, initial, form, defaultRowCurrency]);
 
   useEffect(() => {
     const el = dialogRef.current;

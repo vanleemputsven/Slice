@@ -8,6 +8,7 @@ import { CHART_SEGMENT_COLORS } from "@/lib/subscriptions/chart-data";
 import { getMonthlyMyShare } from "@/lib/subscriptions/calculations";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { SubscriptionRecord } from "@/lib/validation/subscription";
+import { sliceNumberLocale } from "@/lib/i18n/locale";
 import { useSliceT } from "@/lib/i18n/use-slice-t";
 
 type Row = {
@@ -26,7 +27,8 @@ export function MonthlyShareExplorer({
   subscriptions,
   currency,
 }: MonthlyShareExplorerProps) {
-  const { t } = useSliceT();
+  const { t, locale } = useSliceT();
+  const numberLoc = sliceNumberLocale(locale);
   const reduceMotion = useReducedMotion();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -114,7 +116,7 @@ export function MonthlyShareExplorer({
             {t("explorer.monthlyTitle")}
           </p>
           <p className="mt-1 font-mono text-3xl font-semibold tabular-nums tracking-tight text-fg sm:text-4xl">
-            {formatCurrency(total, currency)}
+            {formatCurrency(total, currency, numberLoc)}
             <span className="ml-2 text-lg font-normal text-fg-secondary sm:text-xl">
               {t("explorer.perMo")}
             </span>
@@ -141,7 +143,7 @@ export function MonthlyShareExplorer({
                 id={`slice-seg-${r.id}`}
                 type="button"
                 aria-pressed={isSel}
-                title={`${r.name}: ${formatCurrency(r.share, currency)}/mo`}
+                title={`${r.name}: ${formatCurrency(r.share, currency, numberLoc)}/mo`}
                 className="absolute top-0 flex h-full items-end justify-center overflow-hidden border-r border-canvas last:border-r-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-bright focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                 style={{
                   left: `${left}%`,
@@ -188,7 +190,7 @@ export function MonthlyShareExplorer({
                 <span className="sr-only">
                   {t("explorer.srSegment", {
                     name: r.name,
-                    amount: formatCurrency(r.share, currency),
+                    amount: formatCurrency(r.share, currency, numberLoc),
                     pct: pct.toFixed(1),
                   })}
                 </span>
@@ -237,12 +239,12 @@ export function MonthlyShareExplorer({
                 Without <strong className="font-semibold">{selected.name}</strong>
                 :{" "}
                 <span className="font-mono font-semibold tabular-nums">
-                  {formatCurrency(afterRemove, currency)}
+                  {formatCurrency(afterRemove, currency, numberLoc)}
                 </span>
                 <span className="text-fg-secondary"> / mo</span>
-                <span className="text-muted"> — </span>
+                <span className="text-muted">; </span>
                 <span className="font-mono tabular-nums text-accent-bright">
-                  −{formatCurrency(savings, currency)}
+                  −{formatCurrency(savings, currency, numberLoc)}
                 </span>
                 <span className="text-muted">
                   {" "}

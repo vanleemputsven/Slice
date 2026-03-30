@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Figtree, JetBrains_Mono, Syne } from "next/font/google";
 import "./globals.css";
 import { SubscriptionsProvider } from "@/components/providers/subscriptions-provider";
+import { loadAuthenticatedSlice } from "@/lib/supabase/load-authenticated-slice";
 
 const sliceDisplay = Syne({
   variable: "--font-slice-display",
@@ -26,7 +27,7 @@ const sliceMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Slice — Subscription clarity",
+    default: "Slice · Subscription clarity",
     template: "%s · Slice",
   },
   description:
@@ -42,17 +43,22 @@ export const viewport: Viewport = {
   themeColor: "#0b0c0f",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialSlice = await loadAuthenticatedSlice();
+  const htmlLang = initialSlice?.preferences.locale === "nl" ? "nl" : "en";
+
   return (
-    <html lang="en" className="h-full">
+    <html lang={htmlLang} className="h-full">
       <body
         className={`${sliceDisplay.variable} ${sliceSans.variable} ${sliceMono.variable} min-h-full font-sans text-fg antialiased`}
       >
-        <SubscriptionsProvider>{children}</SubscriptionsProvider>
+        <SubscriptionsProvider initialAuthenticatedSlice={initialSlice}>
+          {children}
+        </SubscriptionsProvider>
       </body>
     </html>
   );

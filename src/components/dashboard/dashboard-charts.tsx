@@ -18,6 +18,7 @@ import {
 import type { SubscriptionRecord } from "@/lib/validation/subscription";
 import type { SubscriptionCategory } from "@/lib/subscriptions/categories";
 import { subscriptionCategoryLabel } from "@/lib/i18n/category-labels";
+import { sliceNumberLocale } from "@/lib/i18n/locale";
 import {
   CHART_AXIS_MUTED,
   CHART_GRID_STROKE,
@@ -37,6 +38,7 @@ function ChartTooltip({
   payload,
   label,
   currency,
+  numberLocale,
   formatter,
   t,
   formatTitle,
@@ -49,6 +51,7 @@ function ChartTooltip({
   }>;
   label?: string | number;
   currency: string;
+  numberLocale: string;
   formatter?: (value: number, payload: Record<string, unknown>) => string;
   t: (key: SliceMessageKey, vars?: Record<string, string | number>) => string;
   formatTitle?: (raw: string) => string;
@@ -62,7 +65,9 @@ function ChartTooltip({
     (typeof label === "string" ? label : null) ??
     (typeof item.name === "string" ? item.name : "—");
   const title = formatTitle ? formatTitle(String(rawTitle)) : String(rawTitle);
-  const text = formatter ? formatter(v, p) : formatCurrency(v, currency);
+  const text = formatter
+    ? formatter(v, p)
+    : formatCurrency(v, currency, numberLocale);
   return (
     <div className="rounded-md bg-[rgb(20_22_28/0.96)] px-2.5 py-2 text-xs shadow-lg ring-1 ring-accent/25">
       <p className="font-medium text-fg">{title}</p>
@@ -70,7 +75,11 @@ function ChartTooltip({
       {typeof p.fullMonthly === "number" && p.shared === true ? (
         <p className="mt-1 text-[11px] text-muted">
           {t("charts.tooltipFullMo", {
-            amount: formatCurrency(p.fullMonthly as number, currency),
+            amount: formatCurrency(
+              p.fullMonthly as number,
+              currency,
+              numberLocale
+            ),
           })}
         </p>
       ) : null}
@@ -83,6 +92,7 @@ export function DashboardCharts({
   currency,
 }: DashboardChartsProps) {
   const { t, locale } = useSliceT();
+  const numberLoc = sliceNumberLocale(locale);
   const categories = useMemo(
     () => spendByCategory(subscriptions),
     [subscriptions]
@@ -176,6 +186,7 @@ export function DashboardCharts({
                         <ChartTooltip
                           t={t}
                           currency={currency}
+                          numberLocale={numberLoc}
                           formatTitle={(name) =>
                             subscriptionCategoryLabel(
                               name as SubscriptionCategory,
@@ -184,7 +195,7 @@ export function DashboardCharts({
                           }
                           formatter={(v, pl) => {
                             const pct = pl.percent as number | undefined;
-                            return `${formatCurrency(v, currency)}/mo${pct != null ? ` · ${pct}%` : ""}`;
+                            return `${formatCurrency(v, currency, numberLoc)}/mo${pct != null ? ` · ${pct}%` : ""}`;
                           }}
                         />
                       }
@@ -274,13 +285,14 @@ export function DashboardCharts({
                       <ChartTooltip
                         t={t}
                         currency={currency}
+                        numberLocale={numberLoc}
                         formatter={(v, pl) => {
                           const full = pl.fullMonthly as number;
                           const sh = pl.shared as boolean;
-                          const yours = `${formatCurrency(v, currency)}/mo`;
+                          const yours = `${formatCurrency(v, currency, numberLoc)}/mo`;
                           return sh
                             ? `${yours}${t("charts.barTooltipFullPart", {
-                                full: formatCurrency(full, currency),
+                                full: formatCurrency(full, currency, numberLoc),
                               })}`
                             : yours;
                         }}

@@ -1,4 +1,4 @@
-import type { AppLocale } from "@/lib/i18n/locale";
+import { sliceNumberLocale, type AppLocale } from "@/lib/i18n/locale";
 import { sliceT } from "@/lib/i18n/messages";
 import type { SubscriptionRecord } from "@/lib/validation/subscription";
 import {
@@ -24,6 +24,7 @@ export function buildInsights(
   currencyCode: string = "USD",
   locale: AppLocale = "en"
 ): CostInsight[] {
+  const numberLoc = sliceNumberLocale(locale);
   const active = subs.filter((s) => s.active);
   const insights: CostInsight[] = [];
 
@@ -44,7 +45,11 @@ export function buildInsights(
       title: sliceT(locale, "insights.yearlyLeader.title"),
       description: sliceT(locale, "insights.yearlyLeader.description", {
         annualName: topAnnual.name,
-        annualAmount: formatCurrency(getAnnualMyShare(topAnnual), currencyCode),
+        annualAmount: formatCurrency(
+          getAnnualMyShare(topAnnual),
+          currencyCode,
+          numberLoc
+        ),
         monthlyName: topMonthly.name,
       }),
       tip: sliceT(locale, "insights.yearlyLeader.tip"),
@@ -60,14 +65,19 @@ export function buildInsights(
     if (topShared) {
       const full = formatCurrency(
         getMonthlyTotalPrice(topShared),
-        currencyCode
+        currencyCode,
+        numberLoc
       );
       insights.push({
         id: "share-visibility",
         title: sliceT(locale, "insights.sharedLargest.title"),
         description: sliceT(locale, "insights.sharedLargest.description", {
           name: topShared.name,
-          yours: formatCurrency(getMonthlyMyShare(topShared), currencyCode),
+          yours: formatCurrency(
+            getMonthlyMyShare(topShared),
+            currencyCode,
+            numberLoc
+          ),
           full,
         }),
         tip: sliceT(locale, "insights.sharedLargest.tip"),

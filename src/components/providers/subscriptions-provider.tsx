@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { insertDefaultUserPreferencesIfMissing } from "@/lib/supabase/bootstrap-user-preferences";
 import { logSupabaseClientError } from "@/lib/supabase/log-error";
 import {
   preferencesToUpsert,
@@ -21,7 +22,11 @@ import {
   type SubscriptionRow,
 } from "@/lib/supabase/maps";
 import { createSeedSubscriptions } from "@/lib/subscriptions/seed";
-import type { Preferences } from "@/lib/validation/preferences";
+import type { AuthenticatedSliceSnapshot } from "@/lib/subscriptions/authenticated-slice-snapshot";
+import {
+  defaultPreferences,
+  type Preferences,
+} from "@/lib/validation/preferences";
 import {
   subscriptionFormSchema,
   subscriptionRecordSchema,
@@ -53,13 +58,6 @@ const SubscriptionsContext = createContext<SubscriptionsContextValue | null>(
   null
 );
 
-const defaultPrefs: Preferences = {
-  hourlyWage: null,
-  hoursPerWorkday: 8,
-  currency: "USD",
-  locale: "en",
-};
-
 function toRecord(
   input: SubscriptionFormInput,
   id: string,
@@ -75,11 +73,20 @@ function toRecord(
   });
 }
 
-async function fetchUserSlice(userId: string): Promise<{
+async function fetchUserSlice(): Promise<{
   subscriptions: SubscriptionRecord[];
   preferences: Preferences;
 }> {
   const supabase = createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    throw authError ?? new Error("Not authenticated");
+  }
+  const userId = user.id;
+
   const [subsRes, prefsRes] = await Promise.all([
     supabase
       .from("subscriptions")
@@ -98,16 +105,20 @@ async function fetchUserSlice(userId: string): Promise<{
   const rows = (subsRes.data ?? []) as SubscriptionRow[];
   const subscriptions = rows.map((r) => rowToSubscriptionRecord(r));
 
-  let preferences = defaultPrefs;
+  let preferences = defaultPreferences;
   if (prefsRes.data) {
     preferences = rowToPreferences(prefsRes.data as PreferencesRow);
   } else {
-    const { error: upsertErr } = await supabase
+    await insertDefaultUserPreferencesIfMissing(supabase, userId);
+    const { data: prefsAgain, error: prefsAgainErr } = await supabase
       .from("user_preferences")
-      .upsert(preferencesToUpsert(userId, defaultPrefs), {
-        onConflict: "user_id",
-      });
-    if (upsertErr) throw upsertErr;
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (prefsAgainErr) throw prefsAgainErr;
+    if (prefsAgain) {
+      preferences = rowToPreferences(prefsAgain as PreferencesRow);
+    }
   }
 
   return { subscriptions, preferences };
@@ -115,16 +126,27 @@ async function fetchUserSlice(userId: string): Promise<{
 
 export function SubscriptionsProvider({
   children,
+  initialAuthenticatedSlice = null,
 }: {
   children: React.ReactNode;
+  initialAuthenticatedSlice?: AuthenticatedSliceSnapshot | null;
 }) {
-  const [ready, setReady] = useState(false);
-  const [subscriptions, setSubscriptions] = useState<SubscriptionRecord[]>([]);
-  const [preferences, setPreferencesState] = useState<Preferences>(defaultPrefs);
+  const [ready, setReady] = useState(() => initialAuthenticatedSlice != null);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionRecord[]>(
+    () => initialAuthenticatedSlice?.subscriptions ?? []
+  );
+  const [preferences, setPreferencesState] = useState<Preferences>(
+    () => initialAuthenticatedSlice?.preferences ?? defaultPreferences
+  );
   const [syncError, setSyncError] = useState<string | null>(null);
 
-  const userIdRef = useRef<string | null>(null);
-  const initialHydrationRef = useRef(false);
+  const userIdRef = useRef<string | null>(
+    initialAuthenticatedSlice?.userId ?? null
+  );
+  const bootstrapUserIdRef = useRef<string | null>(
+    initialAuthenticatedSlice?.userId ?? null
+  );
+  const initialHydrationRef = useRef(!!initialAuthenticatedSlice);
   const prefFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
@@ -193,14 +215,37 @@ export function SubscriptionsProvider({
         userIdRef.current = null;
         initialHydrationRef.current = false;
         setSubscriptions([]);
-        setPreferencesState(defaultPrefs);
+        setPreferencesState(defaultPreferences);
         setReady(true);
         return;
       }
 
       userIdRef.current = userId;
+
+      const bootstrapId = bootstrapUserIdRef.current;
+      const useBootstrap = bootstrapId != null && bootstrapId === userId;
+
+      if (useBootstrap) {
+        initialHydrationRef.current = true;
+        setSyncError(null);
+        setReady(true);
+        void fetchUserSlice()
+          .then((slice) => {
+            if (cancelled || myGen !== authHydrationGenRef.current) return;
+            setSubscriptions(slice.subscriptions);
+            setPreferencesState(slice.preferences);
+            setSyncError(null);
+          })
+          .catch((e) => {
+            logSupabaseClientError("data refresh failed", e);
+            if (cancelled || myGen !== authHydrationGenRef.current) return;
+            setLoadError(localeRef.current);
+          });
+        return;
+      }
+
       try {
-        const slice = await fetchUserSlice(userId);
+        const slice = await fetchUserSlice();
         if (cancelled || myGen !== authHydrationGenRef.current) return;
         setSubscriptions(slice.subscriptions);
         setPreferencesState(slice.preferences);
@@ -449,7 +494,7 @@ export function SubscriptionsProvider({
         setSaveError(localeRef.current);
         return;
       }
-      const resetPrefs = defaultPrefs;
+      const resetPrefs = defaultPreferences;
       const { error: prefErr } = await supabase
         .from("user_preferences")
         .upsert(preferencesToUpsert(uid, resetPrefs), { onConflict: "user_id" });

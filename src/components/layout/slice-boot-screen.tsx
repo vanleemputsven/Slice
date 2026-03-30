@@ -25,11 +25,30 @@ function markSeen() {
   }
 }
 
+/**
+ * Drive bar toward a ceiling while waiting; accelerate to 100% when
+ * the document is complete and app data is ready.
+ */
+function computeLoadTarget(
+  elapsedMs: number,
+  docComplete: boolean,
+  appReady: boolean
+): number {
+  if (appReady && docComplete) return 100;
+
+  const cap = docComplete ? 92 : 82;
+  const tauMs = docComplete ? 1_000 : 2_200;
+  const curved = cap * (1 - Math.exp(-elapsedMs / tauMs));
+  const floor = docComplete ? Math.min(58 + elapsedMs / 120, cap - 2) : 0;
+  return Math.min(cap, Math.max(curved, floor));
+}
+
 export function SliceBootScreen({ children }: { children: ReactNode }) {
   const reduceMotion = useReducedMotion();
   const { ready: appReady } = useSubscriptions();
   const { t } = useSliceT();
   const [active, setActive] = useState(true);
+  const [progress, setProgress] = useState(0);
   const dismissStarted = useRef(false);
 
   /* Skip splash for same-tab revisits; must run before paint (session not available on SSR). */
@@ -44,6 +63,42 @@ export function SliceBootScreen({ children }: { children: ReactNode }) {
     }
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    if (!active) return;
+
+    let cancelled = false;
+    const t0 = performance.now();
+    let raf = 0;
+
+    const loop = () => {
+      if (cancelled) return;
+      const elapsed = performance.now() - t0;
+      const docComplete = document.readyState === "complete";
+      const target = computeLoadTarget(elapsed, docComplete, appReady);
+
+      setProgress((p) => {
+        const alpha = reduceMotion
+          ? target >= 99
+            ? 1
+            : 0.14
+          : target >= 99
+            ? 0.22
+            : 0.085;
+        const step = (target - p) * alpha;
+        const minStep = target >= 99 && p < 99 ? 0.45 : 0;
+        return Math.min(100, Math.max(p + step, p + minStep));
+      });
+
+      raf = requestAnimationFrame(loop);
+    };
+
+    raf = requestAnimationFrame(loop);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
+  }, [active, appReady, reduceMotion]);
 
   const beginDismiss = useCallback(() => {
     if (dismissStarted.current || !active) return;
@@ -93,6 +148,8 @@ export function SliceBootScreen({ children }: { children: ReactNode }) {
   const overlayTransition = reduceMotion
     ? { duration: 0.15 }
     : { duration: 0.42, ease: [0.22, 1, 0.36, 1] as const };
+
+  const rounded = Math.round(progress);
 
   return (
     <>
@@ -170,32 +227,37 @@ export function SliceBootScreen({ children }: { children: ReactNode }) {
                 {t("boot.tagline")}
               </p>
 
-              <div
-                className="flex w-[min(14rem,72vw)] flex-col items-center gap-2"
-                aria-hidden
-              >
-                <div className="h-1 w-full overflow-hidden rounded-full bg-white/[0.07]">
-                  <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-accent-deep via-accent to-accent-bright"
-                    style={{ transformOrigin: "0% 50%" }}
-                    initial={reduceMotion ? false : { scaleX: 0.08, opacity: 0.6 }}
-                    animate={
-                      reduceMotion
-                        ? { scaleX: 0.35 }
-                        : {
-                            scaleX: [0.12, 0.55, 0.22, 0.78, 0.35, 0.92],
-                            opacity: [0.65, 1, 0.8, 1, 0.75, 1],
-                            transition: {
-                              duration: 2.1,
-                              repeat: Infinity,
-                              ease: "easeInOut",
-                            },
-                          }
-                    }
-                  />
+              <div className="flex w-[min(14rem,72vw)] flex-col items-center gap-2">
+                <div
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={rounded}
+                  aria-valuetext={t("boot.progressPercent", { pct: rounded })}
+                  className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.07]"
+                >
+                  <div
+                    className="relative h-full overflow-hidden rounded-full will-change-[width]"
+                    style={{ width: `${progress}%` }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-accent-deep via-accent to-accent-bright" />
+                    {!reduceMotion ? (
+                      <motion.div
+                        aria-hidden
+                        className="absolute -inset-y-px left-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-white/35 to-transparent opacity-80"
+                        style={{ width: "min(42%, 6rem)" }}
+                        animate={{ x: ["-30%", "320%"] }}
+                        transition={{
+                          duration: 1.35,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
+                      />
+                    ) : null}
+                  </div>
                 </div>
                 <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted">
-                  {t("boot.loading")}
+                  {progress >= 96 ? t("boot.almostReady") : t("boot.loading")}
                 </span>
               </div>
             </motion.div>

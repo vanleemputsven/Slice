@@ -15,7 +15,8 @@ export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useSliceT();
-  const { syncError, clearSyncError } = useSubscriptions();
+  const { preferences, syncError, clearSyncError } = useSubscriptions();
+  const displayName = preferences.preferredName?.trim() ?? "";
 
   const item = (href: string, label: string, icon: ReactNode) => {
     const active =
@@ -57,9 +58,19 @@ export function AppHeader() {
         </div>
       ) : null}
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-        <Link href="/dashboard" className="shrink-0" aria-label={t("header.homeAria")}>
-          <SliceMark />
-        </Link>
+        <div className="flex min-w-0 max-w-full flex-1 items-center gap-3 sm:gap-4 md:flex-initial">
+          <Link href="/dashboard" className="shrink-0" aria-label={t("header.homeAria")}>
+            <SliceMark />
+          </Link>
+          {displayName ? (
+            <p
+              className="min-w-0 truncate font-display text-sm font-semibold tracking-tight text-fg-secondary"
+              title={displayName}
+            >
+              {t("header.greetingNamed", { name: displayName })}
+            </p>
+          ) : null}
+        </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
           <nav
             className={`flex items-center gap-1 ${HEADER_CONTROL_SHELL}`}
@@ -77,19 +88,21 @@ export function AppHeader() {
             )}
           </nav>
           <LanguageToggle />
-          <button
-            type="button"
-            onClick={async () => {
-              const supabase = createClient();
-              await supabase.auth.signOut();
-              router.refresh();
-              router.push("/login");
-            }}
-            className={`flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-fg-secondary transition-[background,color] hover:bg-white/[0.06] hover:text-fg ${HEADER_CONTROL_SHELL}`}
-          >
-            <LogOut className="size-4" aria-hidden />
-            <span className="hidden sm:inline">{t("header.signOut")}</span>
-          </button>
+          <div className={`inline-flex min-h-0 ${HEADER_CONTROL_SHELL}`}>
+            <button
+              type="button"
+              onClick={async () => {
+                const supabase = createClient();
+                await supabase.auth.signOut();
+                router.refresh();
+                router.push("/login");
+              }}
+              className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-fg-secondary transition-[background,color] hover:bg-white/[0.06] hover:text-fg"
+            >
+              <LogOut className="size-4 shrink-0" aria-hidden />
+              <span className="hidden sm:inline">{t("header.signOut")}</span>
+            </button>
+          </div>
         </div>
       </div>
     </header>

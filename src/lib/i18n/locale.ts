@@ -6,3 +6,8 @@ export type AppLocale = z.infer<typeof appLocaleSchema>;
 export function sliceDateLocale(locale: AppLocale): string {
   return locale === "nl" ? "nl-NL" : "en-US";
 }
+
+/** Same as dates: keeps currency grouping/symbols aligned with UI language. */
+export function sliceNumberLocale(locale: AppLocale): string {
+  return sliceDateLocale(locale);
+}

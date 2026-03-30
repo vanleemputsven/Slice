@@ -6,6 +6,7 @@ const en = {
   "header.navMain": "Main",
   "header.navOverview": "Overview",
   "header.navSubscriptions": "Subscriptions",
+  "header.greetingNamed": "Hi, {name}",
 
   "dashboard.title": "Overview",
   "dashboard.subtitle":
@@ -219,6 +220,43 @@ const en = {
   "auth.callbackError": "Authentication did not complete. Please try again.",
   "auth.configError":
     "App configuration is incomplete. Set your Supabase environment variables.",
+  "auth.continueWithGoogle": "Continue with Google",
+  "auth.googleSignInFailed":
+    "Google sign-in did not start. Check Supabase and Google OAuth settings.",
+  "auth.orDivider": "or",
+  "welcome.kicker": "You're in",
+  "welcome.stepLabel": "Step {current} of {total}",
+  "welcome.stepProgressAria": "Onboarding progress",
+  "welcome.next": "Next",
+  "welcome.back": "Back",
+  "welcome.narrativeP1":
+    "Welcome. Slice keeps subscriptions, splits, and totals in one clear list.",
+  "welcome.narrativeP2":
+    "Next, a few optional choices—you can skip or change them later.",
+  "welcome.narrativeName":
+    "If you’d like, tell us what we should call you. A first name, a nickname—whatever sounds like you when we say hello in the corner of the screen.",
+  "welcome.narrativeLocale":
+    "Pick the language for menus and numbers.",
+  "welcome.narrativeCurrency":
+    "We’ll show amounts in one currency on your dashboard first. You can always adjust this when life moves across borders—or across banks.",
+  "welcome.narrativeClosing":
+    "When you’re ready, step through. If you’d rather tiptoe in without sharing a thing yet, that’s perfectly fine too.",
+  "welcome.title": "Before we open the dashboard",
+  "welcome.subtitle":
+    "A few gentle details—only if you like. Everything is optional, and you can change it later.",
+  "welcome.nameLabel": "What should we call you?",
+  "welcome.namePlaceholder": "First name or nickname",
+  "welcome.nameHint":
+    "Optional. We’ll use this for a warmer tone here and there—never for receipts.",
+  "welcome.nameTooLong": "Please keep it to 80 characters or fewer.",
+  "welcome.localeLabel": "Language in Slice",
+  "welcome.currencyLabel": "Currency for amounts",
+  "welcome.currencyHint": "You can refine this anytime in your overview.",
+  "welcome.submit": "Save and continue",
+  "welcome.skip": "Skip for now",
+  "welcome.skipHint":
+    "Totally fine—you can add this later from your overview whenever you like.",
+  "welcome.errorSave": "Could not save. Check your connection and try again.",
   "header.signOut": "Sign out",
   "header.syncErrorAria": "Data sync notice",
   "header.dismissError": "Dismiss",
@@ -229,7 +267,101 @@ const en = {
 
   "boot.ariaBusy": "Loading Slice",
   "boot.loading": "Loading…",
+  "boot.almostReady": "Finishing up…",
+  "boot.progressPercent": "{pct}% loaded",
   "boot.tagline": "Subscription clarity",
+
+  "landing.navFeatures": "Features",
+  "landing.navDemo": "Quick scan",
+  "landing.navHow": "How it works",
+  "landing.navSecurity": "Security",
+  "landing.navLogin": "Sign in",
+  "landing.navDashboard": "Dashboard",
+  "landing.heroKicker": "Know what you really pay",
+  "landing.heroTitle": "Subscriptions, without the fog.",
+  "landing.heroLead":
+    "One list for renewals, your share of shared plans, and how many hours that share costs at your rate.",
+  "landing.ctaStart": "Get started free",
+  "landing.ctaDashboard": "Open dashboard",
+  "landing.ctaScroll": "Answer a few questions",
+  "landing.demoTitle": "Quick scan",
+  "landing.demoHint":
+    "Four short steps. Your answers stay in the browser until you leave the page.",
+  "landing.demoTeaserLine": "Something short waits here.",
+  "landing.demoTeaserHint": "Scroll closer—it only appears when you mean it.",
+  "landing.wizardAria": "Quick questionnaire",
+  "landing.wizardStepLabel": "Question {current} of {total}",
+  "landing.wizardStepDone": "Your snapshot",
+  "landing.wizardQ1Title": "About how many subscriptions renew?",
+  "landing.wizardQ1Hint":
+    "A rough count is fine: monthly or yearly renewals you pay for.",
+  "landing.wizardCount1": "1–2",
+  "landing.wizardCount2": "3–5",
+  "landing.wizardCount3": "6–10",
+  "landing.wizardCount4": "More than 10",
+  "landing.wizardQ2Title": "Which categories do they mostly fall into?",
+  "landing.wizardQ2Hint": "Select all categories that match your renewals.",
+  "landing.wizardCatStream": "Streaming & media",
+  "landing.wizardCatSoftware": "Apps & cloud",
+  "landing.wizardCatMobile": "Phone & internet",
+  "landing.wizardCatFitness": "Sport & wellness",
+  "landing.wizardCatNews": "News & learning",
+  "landing.wizardCatOther": "Other",
+  "landing.wizardQ3Title": "What is your monthly spend (your share)?",
+  "landing.wizardQ3Hint": "Your total for all of them together, not per subscription.",
+  "landing.wizardBand1": "Under €50/mo",
+  "landing.wizardBand2": "€50–€100/mo",
+  "landing.wizardBand3": "€100–€200/mo",
+  "landing.wizardBand4": "Over €200/mo",
+  "landing.wizardNext": "Next",
+  "landing.wizardBack": "Back",
+  "landing.wizardStartOver": "Start over",
+  "landing.wizardPickOne": "Pick one option to continue.",
+  "landing.wizardPickCategories": "Pick at least one category.",
+  "landing.wizardDoneTitle": "That adds up fast",
+  "landing.wizardDoneBody":
+    "Renewals, shared plans, and totals are easier when they live in one list. Create a free account and track it properly in Slice.",
+  "landing.wizardDoneSignedInTitle": "You are already in",
+  "landing.wizardDoneSignedInBody":
+    "Open your dashboard to add or edit subscriptions and see charts.",
+  "landing.wizardDoneCta": "Create account",
+  "landing.wizardSummaryIntro": "Snapshot:",
+  "landing.wizardSummaryLine1": "{range} subscription renewals",
+  "landing.wizardSummaryLine3": "Monthly ballpark (your share): {band}",
+  "landing.featuresTitle": "What you get",
+  "landing.featureSubsTitle": "Cycles line up",
+  "landing.featureSubsBody":
+    "Week, month, year, or custom: everything is converted to monthly first so totals match your bank feed.",
+  "landing.featureShareTitle": "Splits stay honest",
+  "landing.featureShareBody":
+    "Shared row, headcount on the row, your share and the gross amount in one place.",
+  "landing.featureChartsTitle": "See the shape",
+  "landing.featureChartsBody":
+    "Category share, ranking, and a bar you can peel back to ask what if this row vanished.",
+  "landing.featureWorkTitle": "Hours, not vibes",
+  "landing.featureWorkBody":
+    "Same field as the dashboard: net rate in, hours and rough workdays out.",
+  "landing.howTitle": "How it works",
+  "landing.howStep1Title": "Add your plans",
+  "landing.howStep1Body":
+    "Streaming, cloud, gym, insurance: anything that renews on a schedule.",
+  "landing.howStep2Title": "Flag shared costs",
+  "landing.howStep2Body":
+    "Roommates, family bundles, team tools: keep the split count on each row so totals stay correct.",
+  "landing.howStep3Title": "Read the dashboard",
+  "landing.howStep3Body":
+    "Totals, insights, renewals, and charts follow your list. No spreadsheet required.",
+  "landing.securityTitle": "Private by design",
+  "landing.securityRls":
+    "Row-level security in Postgres: every row is scoped to your account.",
+  "landing.securityAuth":
+    "Supabase Auth. Sessions are checked on routes that need a login.",
+  "landing.securityData":
+    "Data lives with your account, not in a link anyone can open.",
+  "landing.footerTagline": "Less guessing. Sounder totals.",
+  "landing.footerCopyright":
+    "© {year} Sven Van Leemput. All rights reserved.",
+  "landing.logoAria": "Slice home",
 
   "notFound.title": "Page not found",
   "notFound.hint":
@@ -249,6 +381,7 @@ const nl: Record<MessageKey, string> = {
   "header.navMain": "Hoofdmenu",
   "header.navOverview": "Overzicht",
   "header.navSubscriptions": "Abonnementen",
+  "header.greetingNamed": "Hoi, {name}",
 
   "dashboard.title": "Overzicht",
   "dashboard.subtitle":
@@ -465,6 +598,44 @@ const nl: Record<MessageKey, string> = {
   "auth.callbackError": "Authenticatie mislukt. Probeer het opnieuw.",
   "auth.configError":
     "Configuratie ontbreekt. Stel de Supabase-omgevingsvariabelen in.",
+  "auth.continueWithGoogle": "Doorgaan met Google",
+  "auth.googleSignInFailed":
+    "Inloggen met Google lukte niet. Controleer Supabase en Google OAuth.",
+  "auth.orDivider": "of",
+  "welcome.kicker": "Fijn dat je er bent",
+  "welcome.stepLabel": "Stap {current} van {total}",
+  "welcome.stepProgressAria": "Voortgang kennismaking",
+  "welcome.next": "Volgende",
+  "welcome.back": "Terug",
+  "welcome.narrativeP1":
+    "Welkom bij Slice. Abonnementen, splits en totalen op één heldere plek.",
+  "welcome.narrativeP2":
+    "Straks een paar korte, optionele keuzes—overslaan of later aanpassen kan altijd.",
+  "welcome.narrativeName":
+    "Zeg ons gerust hoe we je mogen noemen. Voornaam, koosnaam—wat voelt als jij wanneer we even hallo zeggen in de hoek van je scherm.",
+  "welcome.narrativeLocale":
+    "Welke taal wil je voor menu’s en cijfers?",
+  "welcome.narrativeCurrency":
+    "We tonen bedragen eerst in één valuta op je dashboard. Later bijstellen mag altijd—werk, land en bank veranderen nu eenmaal mee.",
+  "welcome.narrativeClosing":
+    "Als het goed voelt, ga je verder. Liever stilletjes binnenkomen zonder iets te delen? Dat kan ook—geen drama.",
+  "welcome.title": "Even kennismaken—alleen als jij dat wilt",
+  "welcome.subtitle":
+    "Met een paar zachte vragen maken we Slice wat persoonlijker. Niets is verplicht; je past het later overal aan.",
+  "welcome.nameLabel": "Hoe mogen we je noemen?",
+  "welcome.namePlaceholder": "Voornaam of roepnaam",
+  "welcome.nameHint":
+    "Optioneel. We gebruiken dit voor een warmere toon—niet voor facturen of export.",
+  "welcome.nameTooLong": "Houd het bij maximaal 80 tekens.",
+  "welcome.localeLabel": "Taal in Slice",
+  "welcome.currencyLabel": "Valuta voor bedragen",
+  "welcome.currencyHint": "Je kunt dit altijd bijstellen in je overzicht.",
+  "welcome.submit": "Opslaan en verder",
+  "welcome.skip": "Nu overslaan",
+  "welcome.skipHint":
+    "Helemaal oké—je vult het aan wanneer het uitkomt.",
+  "welcome.errorSave":
+    "Opslaan lukte niet. Controleer je verbinding en probeer opnieuw.",
   "header.signOut": "Uitloggen",
   "header.syncErrorAria": "Melding over synchronisatie",
   "header.dismissError": "Sluiten",
@@ -475,7 +646,102 @@ const nl: Record<MessageKey, string> = {
 
   "boot.ariaBusy": "Slice wordt geladen",
   "boot.loading": "Laden…",
+  "boot.almostReady": "Nog even…",
+  "boot.progressPercent": "{pct}% geladen",
   "boot.tagline": "Helderheid over je abonnementen",
+
+  "landing.navFeatures": "Functies",
+  "landing.navDemo": "Korte scan",
+  "landing.navHow": "Zo werkt het",
+  "landing.navSecurity": "Beveiliging",
+  "landing.navLogin": "Inloggen",
+  "landing.navDashboard": "Dashboard",
+  "landing.heroKicker": "Wat je écht kwijt bent",
+  "landing.heroTitle": "Abonnementen zonder mist.",
+  "landing.heroLead":
+    "Eén lijst: verlengingen, jouw deel van gedeelde plannen, en hoeveel uur dat deel kost tegen jouw tarief.",
+  "landing.ctaStart": "Gratis beginnen",
+  "landing.ctaDashboard": "Dashboard openen",
+  "landing.ctaScroll": "Beantwoord een paar vragen",
+  "landing.demoTitle": "Korte scan",
+  "landing.demoHint":
+    "Vier korte stappen. Je antwoorden blijven in je browser tot je de pagina sluit.",
+  "landing.demoTeaserLine": "Iets korts wacht hier.",
+  "landing.demoTeaserHint":
+    "Scroll dichterbij—het verschijnt pas als je het echt wilt.",
+  "landing.wizardAria": "Korte vragenlijst",
+  "landing.wizardStepLabel": "Vraag {current} van {total}",
+  "landing.wizardStepDone": "Jouw momentopname",
+  "landing.wizardQ1Title": "Ongeveer hoeveel abonnementen lopen er bij jou door?",
+  "landing.wizardQ1Hint":
+    "Grof is oké: alles dat maandelijks of jaarlijks verlengt.",
+  "landing.wizardCount1": "1–2",
+  "landing.wizardCount2": "3–5",
+  "landing.wizardCount3": "6–10",
+  "landing.wizardCount4": "Meer dan 10",
+  "landing.wizardQ2Title": "Welke soorten komen het meest voor?",
+  "landing.wizardQ2Hint": "Kies alles wat past bij jouw verlengingen.",
+  "landing.wizardCatStream": "Streaming & media",
+  "landing.wizardCatSoftware": "Apps & cloud",
+  "landing.wizardCatMobile": "Telefoon & internet",
+  "landing.wizardCatFitness": "Sport & welzijn",
+  "landing.wizardCatNews": "Nieuws & leren",
+  "landing.wizardCatOther": "Anders",
+  "landing.wizardQ3Title": "Wat is jouw maandelijkse uitgave (jouw deel)?",
+  "landing.wizardQ3Hint": "Jouw totaal voor alles samen, niet per abonnementregel.",
+  "landing.wizardBand1": "Onder €50/mnd",
+  "landing.wizardBand2": "€50–€100/mnd",
+  "landing.wizardBand3": "€100–€200/mnd",
+  "landing.wizardBand4": "Meer dan €200/mnd",
+  "landing.wizardNext": "Verder",
+  "landing.wizardBack": "Terug",
+  "landing.wizardStartOver": "Opnieuw beginnen",
+  "landing.wizardPickOne": "Kies een optie om verder te gaan.",
+  "landing.wizardPickCategories": "Kies minimaal één soort.",
+  "landing.wizardDoneTitle": "Dat loopt snel op",
+  "landing.wizardDoneBody":
+    "Verlengingen, gedeelde plannen en totalen beheer je beter op één plek. Maak een gratis account en vul het in Slice bij.",
+  "landing.wizardDoneSignedInTitle": "Je bent al ingelogd",
+  "landing.wizardDoneSignedInBody":
+    "Open je dashboard om abonnementen toe te voegen of aan te passen en grafieken te zien.",
+  "landing.wizardDoneCta": "Account aanmaken",
+  "landing.wizardSummaryIntro": "Jouw scan in het kort:",
+  "landing.wizardSummaryLine1": "{range} terugkerende abonnementen",
+  "landing.wizardSummaryLine3": "Globaal per maand (jouw deel): {band}",
+  "landing.featuresTitle": "Wat je ermee doet",
+  "landing.featureSubsTitle": "Oplijnen van cycli",
+  "landing.featureSubsBody":
+    "Week, maand, jaar of maatwerk: eerst naar maandbedrag, dan pas totalen en splits.",
+  "landing.featureShareTitle": "Eerlijke splits",
+  "landing.featureShareBody":
+    "Gedeelde regel, aantal mensen op die regel, jouw deel en het bruto­bedrag samen.",
+  "landing.featureChartsTitle": "Vorm van je uitgaven",
+  "landing.featureChartsBody":
+    "Aandeel per categorie, ranglijst, en een staaf om te vragen: wat als deze regel wegvalt?",
+  "landing.featureWorkTitle": "Uren, niet gevoel",
+  "landing.featureWorkBody":
+    "Zelfde veld als in het dashboard: netto tarief erin, uren en ruwe werkdagen eruit.",
+  "landing.howTitle": "Zo werkt het",
+  "landing.howStep1Title": "Voeg je plannen toe",
+  "landing.howStep1Body":
+    "Streaming, cloud, sportschool, verzekering: alles dat volgens een verlengingsritme loopt.",
+  "landing.howStep2Title": "Markeer gedeelde kosten",
+  "landing.howStep2Body":
+    "Huisgenoten, familiebundel, teamtools: houd het aantal splitsingen op elke regel zodat de som klopt.",
+  "landing.howStep3Title": "Lees het dashboard",
+  "landing.howStep3Body":
+    "Totalen, inzichten, verlengingen en grafieken volgen je lijst. Geen spreadsheet nodig.",
+  "landing.securityTitle": "Privé by design",
+  "landing.securityRls":
+    "Row-level security in Postgres: elke rij hoort bij jouw account.",
+  "landing.securityAuth":
+    "Supabase Auth. Sessies worden gecontroleerd op routes die een login vragen.",
+  "landing.securityData":
+    "Gegevens horen bij jouw account, niet bij een link die iedereen kan openen.",
+  "landing.footerTagline": "Minder gissen. Betere totalen.",
+  "landing.footerCopyright":
+    "© {year} Sven Van Leemput. Alle rechten voorbehouden.",
+  "landing.logoAria": "Slice startpagina",
 
   "notFound.title": "Pagina niet gevonden",
   "notFound.hint": "Die URL bestaat niet. Ga terug naar je dashboard.",

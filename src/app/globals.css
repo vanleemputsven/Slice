@@ -87,6 +87,11 @@
   }
 }
 
+/* Reserve vertical scrollbar width so toggling overflow (e.g. taller login form) does not shift layout. */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   background-color: rgb(var(--slice-canvas));
   /* Single soft lift — coral only, no secondary “tech purple” */

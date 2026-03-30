@@ -19,7 +19,7 @@ import {
 import { SUBSCRIPTION_CATEGORIES } from "@/lib/subscriptions/categories";
 import { formatCurrency } from "@/lib/utils/currency";
 import { subscriptionCategoryLabel } from "@/lib/i18n/category-labels";
-import { sliceDateLocale } from "@/lib/i18n/locale";
+import { sliceDateLocale, sliceNumberLocale } from "@/lib/i18n/locale";
 import { useSliceT } from "@/lib/i18n/use-slice-t";
 
 type SortKey = "cost" | "next" | "name" | "category";
@@ -38,6 +38,7 @@ export function SubscriptionsClient() {
   const highlightId = searchParams.get("highlight");
   const { t, locale } = useSliceT();
   const dateLoc = sliceDateLocale(locale);
+  const numberLoc = sliceNumberLocale(locale);
 
   const {
     ready,
@@ -368,10 +369,10 @@ export function SubscriptionsClient() {
                           {billingLabel(s)}
                         </td>
                         <td className="px-4 py-3 font-mono tabular-nums text-fg-secondary">
-                          {formatCurrency(getMonthlyTotalPrice(s), cur)}
+                          {formatCurrency(getMonthlyTotalPrice(s), cur, numberLoc)}
                         </td>
                         <td className="px-4 py-3 font-mono tabular-nums font-semibold text-fg">
-                          {formatCurrency(getMonthlyMyShare(s), cur)}
+                          {formatCurrency(getMonthlyMyShare(s), cur, numberLoc)}
                         </td>
                         <td className={`px-4 py-3 tabular-nums ${soon}`}>
                           {next.toLocaleDateString(dateLoc, {

@@ -126,6 +126,8 @@ export type PreferencesRow = {
   currency: string;
   locale: string;
   updated_at: string;
+  preferred_name?: string | null;
+  welcome_completed_at?: string | null;
 };
 
 export function rowToPreferences(row: PreferencesRow): Preferences {
@@ -136,11 +138,18 @@ export function rowToPreferences(row: PreferencesRow): Preferences {
       : typeof hourlyRaw === "string"
         ? Number(hourlyRaw)
         : hourlyRaw;
+  const rawName = row.preferred_name;
+  const preferredName =
+    rawName == null || String(rawName).trim() === ""
+      ? null
+      : String(rawName).trim().slice(0, 80);
+
   return preferencesSchema.parse({
     hourlyWage: hourly,
     hoursPerWorkday: row.hours_per_workday,
     currency: row.currency,
     locale: row.locale,
+    preferredName,
   });
 }
 
