@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { safeNextPath } from "@/lib/auth/safe-next-path";
 import type { AppLocale } from "@/lib/i18n/locale";
 import { createClient } from "@/lib/supabase/server";
+import { WelcomePageSkeleton } from "@/components/skeleton/auth-skeleton";
 import {
   welcomeCurrencyCodes,
   type WelcomeCurrencyCode,
@@ -72,13 +73,7 @@ export default function WelcomePage({
   searchParams: Promise<{ next?: string }>;
 }) {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center bg-canvas text-sm text-fg-secondary">
-          …
-        </div>
-      }
-    >
+    <Suspense fallback={<WelcomePageSkeleton />}>
       <WelcomePageContent searchParams={searchParams} />
     </Suspense>
   );

@@ -13,6 +13,7 @@ import {
 } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { HEADER_CONTROL_SHELL } from "@/components/layout/header-controls";
+import { AuthBootSkeleton } from "@/components/skeleton/auth-skeleton";
 import type { AppLocale } from "@/lib/i18n/locale";
 import { sliceT, type SliceMessageKey } from "@/lib/i18n/messages";
 import {
@@ -231,18 +232,7 @@ export function WelcomeForm({
   }, [nameErr, t]);
 
   if (!mounted) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-canvas px-4">
-        <div className="flex flex-col items-center gap-4 opacity-60">
-          <div className="h-10 w-40 rounded-md bg-white/[0.07]" />
-          <div className="h-3 w-48 rounded-full bg-white/[0.05]" />
-          <div className="h-36 w-full max-w-md rounded-2xl bg-white/[0.04] ring-1 ring-white/[0.06]" />
-        </div>
-        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted">
-          …
-        </p>
-      </div>
-    );
+    return <AuthBootSkeleton />;
   }
 
   const progressDots = (

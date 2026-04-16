@@ -6,6 +6,7 @@ import { Pencil, Plus, RotateCcw, Share2, Trash2 } from "lucide-react";
 import { useSubscriptions } from "@/components/providers/subscriptions-provider";
 import { ProviderAvatar } from "@/components/subscriptions/provider-avatar";
 import { SubscriptionFormDialog } from "@/components/subscriptions/subscription-form-dialog";
+import { SubscriptionsSkeleton } from "@/components/subscriptions/subscriptions-skeleton";
 import type {
   SubscriptionFormInput,
   SubscriptionRecord,
@@ -21,17 +22,22 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { subscriptionCategoryLabel } from "@/lib/i18n/category-labels";
 import { sliceDateLocale, sliceNumberLocale } from "@/lib/i18n/locale";
 import { useSliceT } from "@/lib/i18n/use-slice-t";
+import { HEADER_CONTROL_SHELL } from "@/components/layout/header-controls";
 
 type SortKey = "cost" | "next" | "name" | "category";
 type FilterShared = "all" | "shared" | "solo";
 
-function tabClass(active: boolean) {
-  return `shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+/** Matches header nav / language toggle — one visual system */
+function segmentClass(active: boolean) {
+  return `shrink-0 snap-start rounded-full px-3.5 py-2 text-sm font-semibold transition-[background,color,box-shadow] ${
     active
-      ? "bg-white/14 text-fg shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]"
+      ? "bg-white/12 text-fg shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]"
       : "text-fg-secondary hover:bg-white/[0.06] hover:text-fg"
   }`;
 }
+
+const hideScrollbar =
+  "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden";
 
 export function SubscriptionsClient() {
   const searchParams = useSearchParams();
@@ -112,13 +118,7 @@ export function SubscriptionsClient() {
   }, [ready, highlightId, filteredSorted]);
 
   if (!ready) {
-    return (
-      <div className="animate-pulse space-y-4" aria-hidden>
-        <div className="h-10 w-64 rounded-2xl bg-white/[0.06]" />
-        <div className="h-28 rounded-2xl bg-white/[0.04]" />
-        <div className="slice-card h-96" />
-      </div>
-    );
+    return <SubscriptionsSkeleton />;
   }
 
   return (
@@ -209,96 +209,124 @@ export function SubscriptionsClient() {
       ) : (
         <>
           <div
-            className="space-y-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 sm:p-5"
+            className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 sm:p-4"
             role="region"
             aria-label={t("subs.filterRegion")}
           >
-            <div>
-              <p className="text-xs font-semibold text-muted">{t("subs.category")}</p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  className={tabClass(filterCategory === "all")}
-                  onClick={() => setFilterCategory("all")}
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:gap-8">
+              <div className="min-w-0 flex-1">
+                <p id="subs-filter-cat" className="slice-label mb-2">
+                  {t("subs.category")}
+                </p>
+                <div
+                  className="rounded-xl bg-white/[0.03] p-1 ring-1 ring-white/[0.06]"
+                  role="group"
+                  aria-labelledby="subs-filter-cat"
                 >
-                  {t("subs.all")}
-                </button>
-                {SUBSCRIPTION_CATEGORIES.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    className={tabClass(filterCategory === c)}
-                    onClick={() => setFilterCategory(c)}
+                  <div
+                    className={`flex flex-nowrap gap-1 overflow-x-auto px-0.5 py-0.5 ${hideScrollbar}`}
                   >
-                    {subscriptionCategoryLabel(c, locale)}
-                  </button>
-                ))}
+                    <button
+                      type="button"
+                      aria-pressed={filterCategory === "all"}
+                      className={segmentClass(filterCategory === "all")}
+                      onClick={() => setFilterCategory("all")}
+                    >
+                      {t("subs.all")}
+                    </button>
+                    {SUBSCRIPTION_CATEGORIES.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        aria-pressed={filterCategory === c}
+                        className={segmentClass(filterCategory === c)}
+                        onClick={() => setFilterCategory(c)}
+                      >
+                        {subscriptionCategoryLabel(c, locale)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-muted">{t("subs.sharing")}</p>
-              <div
-                className="mt-2 flex flex-wrap gap-1.5"
-                role="tablist"
-                aria-label={t("subs.sharingAria")}
-              >
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={filterShared === "all"}
-                  className={tabClass(filterShared === "all")}
-                  onClick={() => setFilterShared("all")}
-                >
-                  {t("subs.all")}
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={filterShared === "shared"}
-                  className={tabClass(filterShared === "shared")}
-                  onClick={() => setFilterShared("shared")}
-                >
-                  {t("subs.shared")}
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={filterShared === "solo"}
-                  className={tabClass(filterShared === "solo")}
-                  onClick={() => setFilterShared("solo")}
-                >
-                  {t("subs.notShared")}
-                </button>
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-muted">{t("subs.sortBy")}</p>
-              <div
-                className="mt-2 flex flex-wrap gap-1.5"
-                role="tablist"
-                aria-label={t("subs.sortAria")}
-              >
-                {(
-                  [
-                    ["next", "subs.sortNext"],
-                    ["cost", "subs.sortCost"],
-                    ["name", "subs.sortName"],
-                    ["category", "subs.sortCategory"],
-                  ] as const
-                ).map(([key, labelKey]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    role="tab"
-                    aria-selected={sort === key}
-                    className={tabClass(sort === key)}
-                    onClick={() => setSort(key)}
+
+              <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end sm:gap-5 lg:shrink-0">
+                <div className="min-w-0 sm:w-[min(100%,14rem)]">
+                  <p id="subs-filter-share" className="slice-label mb-2">
+                    {t("subs.sharing")}
+                  </p>
+                  <div
+                    role="group"
+                    aria-labelledby="subs-filter-share"
+                    className={`flex max-w-full flex-nowrap gap-1 overflow-x-auto ${hideScrollbar} ${HEADER_CONTROL_SHELL}`}
                   >
-                    {t(labelKey)}
-                  </button>
-                ))}
+                    <button
+                      type="button"
+                      aria-pressed={filterShared === "all"}
+                      className={segmentClass(filterShared === "all")}
+                      onClick={() => setFilterShared("all")}
+                    >
+                      {t("subs.all")}
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={filterShared === "shared"}
+                      className={segmentClass(filterShared === "shared")}
+                      onClick={() => setFilterShared("shared")}
+                    >
+                      {t("subs.shared")}
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={filterShared === "solo"}
+                      className={segmentClass(filterShared === "solo")}
+                      onClick={() => setFilterShared("solo")}
+                    >
+                      {t("subs.notShared")}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="min-w-0 flex-1 sm:min-w-[min(100%,22rem)]">
+                  <p id="subs-filter-sort" className="slice-label mb-2">
+                    {t("subs.sortBy")}
+                  </p>
+                  <div
+                    role="group"
+                    aria-labelledby="subs-filter-sort"
+                    className={`flex max-w-full flex-nowrap gap-1 overflow-x-auto ${hideScrollbar} ${HEADER_CONTROL_SHELL}`}
+                  >
+                    {(
+                      [
+                        ["next", "subs.sortNext"],
+                        ["cost", "subs.sortCost"],
+                        ["name", "subs.sortName"],
+                        ["category", "subs.sortCategory"],
+                      ] as const
+                    ).map(([key, labelKey]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        aria-pressed={sort === key}
+                        className={segmentClass(sort === key)}
+                        onClick={() => setSort(key)}
+                      >
+                        {t(labelKey)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
+
+            <p
+              className="mt-3 border-t border-white/[0.05] pt-3 text-xs text-muted"
+              aria-live="polite"
+            >
+              {t("subs.listSummary", {
+                shown: filteredSorted.length,
+                total: subscriptions.length,
+              })}
+            </p>
           </div>
 
           <div className="slice-card overflow-hidden">

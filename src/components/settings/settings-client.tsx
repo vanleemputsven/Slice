@@ -11,6 +11,7 @@ import {
 import { formatCurrency } from "@/lib/utils/currency";
 import { sliceDateLocale } from "@/lib/i18n/locale";
 import { useSliceT } from "@/lib/i18n/use-slice-t";
+import { SettingsSkeleton } from "@/components/settings/settings-skeleton";
 import { deleteUserAccount } from "@/lib/account/delete-account";
 import { createClient } from "@/lib/supabase/client";
 
@@ -41,12 +42,7 @@ export function SettingsClient() {
   };
 
   if (!ready) {
-    return (
-      <div className="animate-pulse space-y-4" aria-hidden>
-        <div className="h-10 w-64 rounded-2xl bg-white/[0.06]" />
-        <div className="slice-card h-48" />
-      </div>
-    );
+    return <SettingsSkeleton />;
   }
 
   return (

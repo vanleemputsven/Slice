@@ -24,25 +24,12 @@ import {
 import { buildInsights } from "@/lib/subscriptions/insights";
 import { formatCurrency } from "@/lib/utils/currency";
 import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
+import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
 import { DashboardInsights } from "@/components/dashboard/dashboard-insights";
 import { MonthlyShareExplorer } from "@/components/dashboard/monthly-share-explorer";
 import { TopCostFocus } from "@/components/dashboard/top-cost-focus";
 import { sliceDateLocale } from "@/lib/i18n/locale";
 import { useSliceT } from "@/lib/i18n/use-slice-t";
-
-function Skeleton() {
-  return (
-    <div className="animate-pulse space-y-6" aria-hidden>
-      <div className="slice-card h-56 rounded-[var(--slice-radius-xl)] bg-white/[0.04]" />
-      <div className="h-8 w-48 rounded-2xl bg-white/[0.06]" />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="slice-card h-28" />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export function DashboardClient() {
   const {
@@ -124,11 +111,7 @@ export function DashboardClient() {
   const cur = preferences.currency ?? "USD";
 
   if (!ready) {
-    return (
-      <div>
-        <Skeleton />
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
