@@ -3,12 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  AnimatePresence,
   motion,
-  useInView,
   useMotionTemplate,
   useMotionValue,
-  useMotionValueEvent,
   useReducedMotion,
   useScroll,
   useSpring,
@@ -16,7 +13,7 @@ import {
 } from "framer-motion";
 import {
   BarChart3,
-  ChevronDown,
+  ChevronRight,
   Clock,
   Lock,
   ShieldCheck,
@@ -28,42 +25,18 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import type { AppLocale } from "@/lib/i18n/locale";
 import { sliceT, type SliceMessageKey } from "@/lib/i18n/messages";
 import { HEADER_CONTROL_SHELL } from "@/components/layout/header-controls";
+import { HeroScreenshotSlideshow } from "@/components/marketing/hero-screenshot-slideshow";
+import { LandingValueTicker } from "@/components/marketing/landing-value-ticker";
 
 const LOGIN_LOCALE_KEY = "slice-login-locale";
 
-const SECTION_IDS = ["demo", "features", "how", "security"] as const;
+const SECTION_IDS = ["features", "how", "security"] as const;
 type SectionId = (typeof SECTION_IDS)[number];
-
-const WIZARD_QUESTIONS = 3;
-
-const COUNT_OPTIONS = [
-  { id: "c1", labelKey: "landing.wizardCount1" as const },
-  { id: "c2", labelKey: "landing.wizardCount2" as const },
-  { id: "c3", labelKey: "landing.wizardCount3" as const },
-  { id: "c4", labelKey: "landing.wizardCount4" as const },
-] as const;
-
-const CATEGORY_OPTIONS = [
-  { id: "stream", labelKey: "landing.wizardCatStream" as const },
-  { id: "software", labelKey: "landing.wizardCatSoftware" as const },
-  { id: "mobile", labelKey: "landing.wizardCatMobile" as const },
-  { id: "fitness", labelKey: "landing.wizardCatFitness" as const },
-  { id: "news", labelKey: "landing.wizardCatNews" as const },
-  { id: "other", labelKey: "landing.wizardCatOther" as const },
-] as const;
-
-const BAND_OPTIONS = [
-  { id: "b1", labelKey: "landing.wizardBand1" as const },
-  { id: "b2", labelKey: "landing.wizardBand2" as const },
-  { id: "b3", labelKey: "landing.wizardBand3" as const },
-  { id: "b4", labelKey: "landing.wizardBand4" as const },
-] as const;
 
 function readLoginLocale(): AppLocale {
   if (typeof window === "undefined") return "en";
@@ -86,12 +59,6 @@ export function HomeLanding({ isSignedIn }: HomeLandingProps) {
   const [mounted, setMounted] = useState(false);
   const [activeSection, setActiveSection] = useState<SectionId | null>(null);
 
-  const [wizardStep, setWizardStep] = useState(0);
-  const [countId, setCountId] = useState<string | null>(null);
-  const [categorySet, setCategorySet] = useState<Set<string>>(() => new Set());
-  const [bandId, setBandId] = useState<string | null>(null);
-  const [wizardError, setWizardError] = useState<string | null>(null);
-
   const mouseX = useMotionValue(0.5);
   const mouseY = useMotionValue(0.32);
   const springX = useSpring(mouseX, { stiffness: 80, damping: 28 });
@@ -103,43 +70,6 @@ export function HomeLanding({ isSignedIn }: HomeLandingProps) {
   const { scrollY } = useScroll();
   const heroBlobY = useTransform(scrollY, [0, 420], [0, 90]);
 
-  const demoSectionRef = useRef<HTMLDivElement | null>(null);
-  const demoInView = useInView(demoSectionRef, {
-    amount: 0.28,
-    margin: "0px 0px -12% 0px",
-  });
-  const [isLgLayout, setIsLgLayout] = useState(false);
-  const [viewportReady, setViewportReady] = useState(false);
-  const [hasScrolled, setHasScrolled] = useState(false);
-  const [scanIntent, setScanIntent] = useState(false);
-
-  useMotionValueEvent(scrollY, "change", (y) => {
-    if (y > 40) setHasScrolled(true);
-  });
-
-  useLayoutEffect(() => {
-    if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(min-width: 1024px)");
-    setIsLgLayout(mq.matches);
-    setViewportReady(true);
-    const onChange = () => setIsLgLayout(mq.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-
-  const tryOpenScan = useCallback(() => setScanIntent(true), []);
-
-  const scanUnlockReady =
-    reduceMotion ||
-    (viewportReady &&
-      demoInView &&
-      (!isLgLayout || hasScrolled || scanIntent));
-
-  const [scanRevealed, setScanRevealed] = useState(false);
-  useEffect(() => {
-    if (scanUnlockReady) setScanRevealed(true);
-  }, [scanUnlockReady]);
-
   const t = useCallback(
     (key: SliceMessageKey, vars?: Record<string, string | number>) =>
       sliceT(locale, key, vars),
@@ -150,11 +80,6 @@ export function HomeLanding({ isSignedIn }: HomeLandingProps) {
     setLocale(readLoginLocale());
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (!mounted || typeof window === "undefined") return;
-    if (window.location.hash === "#demo") setScanIntent(true);
-  }, [mounted]);
 
   useLayoutEffect(() => {
     if (typeof document === "undefined") return;
@@ -198,12 +123,11 @@ export function HomeLanding({ isSignedIn }: HomeLandingProps) {
 
   const smoothScrollId = useCallback(
     (id: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
-      if (id === "demo") tryOpenScan();
       if (reduceMotion) return;
       e.preventDefault();
       document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
     },
-    [reduceMotion, tryOpenScan]
+    [reduceMotion]
   );
 
   const navLinkClass = useCallback(
@@ -218,57 +142,6 @@ export function HomeLanding({ isSignedIn }: HomeLandingProps) {
     },
     [activeSection]
   );
-
-  const toggleCategory = useCallback((id: string) => {
-    setCategorySet((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-    setWizardError(null);
-  }, []);
-
-  const resetWizard = useCallback(() => {
-    setWizardStep(0);
-    setCountId(null);
-    setCategorySet(new Set());
-    setBandId(null);
-    setWizardError(null);
-  }, []);
-
-  const goNext = useCallback(() => {
-    setWizardError(null);
-    if (wizardStep === 0) {
-      if (!countId) {
-        setWizardError(t("landing.wizardPickOne"));
-        return;
-      }
-      setWizardStep(1);
-      return;
-    }
-    if (wizardStep === 1) {
-      if (categorySet.size === 0) {
-        setWizardError(t("landing.wizardPickCategories"));
-        return;
-      }
-      setWizardStep(2);
-      return;
-    }
-    if (wizardStep === 2) {
-      if (!bandId) {
-        setWizardError(t("landing.wizardPickOne"));
-        return;
-      }
-      setWizardStep(3);
-    }
-  }, [bandId, categorySet.size, countId, t, wizardStep]);
-
-  const goBack = useCallback(() => {
-    setWizardError(null);
-    if (wizardStep <= 0) return;
-    setWizardStep((s) => s - 1);
-  }, [wizardStep]);
 
   const featureItems = useMemo(
     () =>
@@ -296,20 +169,6 @@ export function HomeLanding({ isSignedIn }: HomeLandingProps) {
       ] as const,
     []
   );
-
-  const summaryLines = useMemo(() => {
-    const countLabel =
-      COUNT_OPTIONS.find((o) => o.id === countId)?.labelKey ?? null;
-    const bandLabel = BAND_OPTIONS.find((o) => o.id === bandId)?.labelKey ?? null;
-    const cats = CATEGORY_OPTIONS.filter((o) => categorySet.has(o.id)).map(
-      (o) => t(o.labelKey)
-    );
-    return {
-      countLabel: countLabel ? t(countLabel) : "",
-      categoriesText: cats.join(", "),
-      bandLabel: bandLabel ? t(bandLabel) : "",
-    };
-  }, [bandId, categorySet, countId, t]);
 
   const onHeroPointer = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
@@ -343,15 +202,6 @@ export function HomeLanding({ isSignedIn }: HomeLandingProps) {
   const primaryLabel = isSignedIn
     ? t("landing.ctaDashboard")
     : t("landing.ctaStart");
-
-  const wizardProgressPct =
-    wizardStep >= WIZARD_QUESTIONS
-      ? 100
-      : ((wizardStep + 1) / WIZARD_QUESTIONS) * 100;
-
-  const stepTransition = reduceMotion
-    ? { duration: 0.15 }
-    : { duration: 0.28, ease: [0.33, 1, 0.68, 1] as const };
 
   return (
     <div className="relative min-h-screen overflow-x-hidden text-fg">
@@ -388,14 +238,13 @@ export function HomeLanding({ isSignedIn }: HomeLandingProps) {
             className="order-3 flex w-full flex-wrap items-center justify-center gap-1 sm:order-none sm:w-auto sm:justify-end md:gap-1.5"
             aria-label={t("header.navMain")}
           >
-            {(
-              [
-                ["features", "landing.navFeatures"],
-                ["demo", "landing.navDemo"],
-                ["how", "landing.navHow"],
-                ["security", "landing.navSecurity"],
-              ] as const
-            ).map(([id, key]) => (
+              {(
+                [
+                  ["features", "landing.navFeatures"],
+                  ["how", "landing.navHow"],
+                  ["security", "landing.navSecurity"],
+                ] as const
+              ).map(([id, key]) => (
               <a
                 key={id}
                 href={`#${id}`}
@@ -480,17 +329,13 @@ export function HomeLanding({ isSignedIn }: HomeLandingProps) {
             style={{ backgroundImage: spotlight }}
           />
 
-          <div className="relative grid gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-stretch lg:gap-14">
-            <div className="flex flex-col justify-center lg:py-4">
+          <div className="relative flex flex-col items-stretch gap-9 md:flex-row md:items-center md:justify-between md:gap-10 lg:gap-12 xl:gap-14">
+            <div className="flex min-w-0 max-w-2xl flex-col justify-center md:py-1 lg:py-4">
               <motion.p
-                className="inline-flex w-fit items-center gap-2 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-bright"
+                className="w-fit font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-bright"
                 initial={false}
                 animate={{ opacity: 1, y: 0 }}
               >
-                <span
-                  className="h-px w-6 shrink-0 bg-accent-bright/80"
-                  aria-hidden
-                />
                 {t("boot.tagline")}
               </motion.p>
               <motion.h1
@@ -534,371 +379,15 @@ export function HomeLanding({ isSignedIn }: HomeLandingProps) {
                 <Link href={primaryHref} className="slice-btn-primary">
                   {primaryLabel}
                 </Link>
-                <a
-                  href="#demo"
-                  onClick={smoothScrollId("demo")}
-                  className="slice-btn-secondary gap-1.5"
-                >
+                <Link href="/demo" className="slice-btn-secondary gap-1.5">
                   {t("landing.ctaScroll")}
-                  <ChevronDown className="size-4 opacity-80" aria-hidden />
-                </a>
+                  <ChevronRight className="size-4 opacity-80" aria-hidden />
+                </Link>
               </motion.div>
             </div>
 
-            <div
-              ref={demoSectionRef}
-              id="demo"
-              className="relative scroll-mt-28 lg:flex lg:min-h-[min(100%,26rem)] lg:flex-col"
-            >
-              <motion.div
-                role="region"
-                aria-label={t("landing.wizardAria")}
-                className="slice-card relative flex flex-col overflow-hidden p-6 sm:p-8 lg:min-h-[min(100%,26rem)] lg:flex-1"
-                initial={reduceMotion ? false : { opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={
-                  reduceMotion
-                    ? { duration: 0.2 }
-                    : { type: "spring", stiffness: 260, damping: 28 }
-                }
-              >
-                <div
-                  className="pointer-events-none absolute -right-20 -top-28 h-56 w-56 rounded-full bg-accent/20 blur-3xl"
-                  aria-hidden
-                />
-
-                <AnimatePresence initial={false} mode="wait">
-                  {!scanRevealed ? (
-                    <motion.div
-                      key="scan-teaser"
-                      role="presentation"
-                      initial={reduceMotion ? false : { opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={
-                        reduceMotion
-                          ? { opacity: 0, transition: { duration: 0.12 } }
-                          : { opacity: 0, filter: "blur(10px)", transition: { duration: 0.38 } }
-                      }
-                      transition={{ duration: 0.45, ease: [0.33, 1, 0.68, 1] }}
-                      className="relative flex min-h-[19rem] flex-col items-center justify-center gap-6 py-6 text-center sm:min-h-[18rem]"
-                    >
-                      <div
-                        className="pointer-events-none absolute inset-6 rounded-2xl opacity-[0.45]"
-                        style={{
-                          background:
-                            "repeating-linear-gradient(0deg, transparent, transparent 11px, rgb(var(--slice-accent) / 0.045) 11px, rgb(var(--slice-accent) / 0.045) 12px)",
-                          maskImage:
-                            "linear-gradient(180deg, transparent, black 22%, black 78%, transparent)",
-                        }}
-                        aria-hidden
-                      />
-                      <motion.div
-                        className="pointer-events-none absolute left-8 right-8 top-[22%] h-px bg-gradient-to-r from-transparent via-accent/45 to-transparent"
-                        aria-hidden
-                        animate={
-                          reduceMotion
-                            ? {}
-                            : {
-                                top: ["22%", "50%", "78%", "22%"],
-                              }
-                        }
-                        transition={{
-                          duration: 5.5,
-                          repeat: Infinity,
-                          ease: "easeInOut",
-                        }}
-                      />
-                      <p className="relative z-[1] max-w-[16rem] font-sans text-sm font-semibold leading-snug tracking-wide text-fg-secondary/90">
-                        {t("landing.demoTeaserLine")}
-                      </p>
-                      <p className="relative z-[1] max-w-[15rem] text-xs leading-relaxed text-muted">
-                        {t("landing.demoTeaserHint")}
-                      </p>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="scan-wizard"
-                      initial={reduceMotion ? false : { opacity: 0, y: 10, filter: "blur(6px)" }}
-                      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                      transition={{
-                        duration: reduceMotion ? 0.15 : 0.5,
-                        ease: [0.33, 1, 0.68, 1],
-                      }}
-                      className="flex flex-col"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <p className="font-sans text-lg font-bold leading-snug text-fg">
-                            {t("landing.demoTitle")}
-                          </p>
-                          <p className="mt-2 max-w-md text-sm leading-relaxed text-fg-secondary">
-                            {t("landing.demoHint")}
-                          </p>
-                        </div>
-                        {/* Same-size placeholder on step 1 avoids header jump when the button appears */}
-                        <div className="shrink-0">
-                          {wizardStep > 0 ? (
-                            <button
-                              type="button"
-                              onClick={resetWizard}
-                              className="rounded-full px-3 py-1.5 text-xs font-semibold text-muted transition-[color,background] hover:bg-white/[0.06] hover:text-fg"
-                            >
-                              {t("landing.wizardStartOver")}
-                            </button>
-                          ) : (
-                            <span
-                              className="pointer-events-none block rounded-full px-3 py-1.5 text-xs font-semibold opacity-0"
-                              aria-hidden
-                            >
-                              {t("landing.wizardStartOver")}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="mt-5">
-                        <div
-                          className="h-1 overflow-hidden rounded-full bg-white/[0.07]"
-                          role="progressbar"
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                          aria-valuenow={Math.round(wizardProgressPct)}
-                          aria-label={
-                            wizardStep < WIZARD_QUESTIONS
-                              ? t("landing.wizardStepLabel", {
-                                  current: wizardStep + 1,
-                                  total: WIZARD_QUESTIONS,
-                                })
-                              : t("landing.wizardStepDone")
-                          }
-                        >
-                          <motion.div
-                            className="h-full rounded-full bg-gradient-to-r from-accent-deep via-accent to-accent-bright"
-                            initial={false}
-                            animate={{ width: `${wizardProgressPct}%` }}
-                            transition={
-                              reduceMotion
-                                ? { duration: 0 }
-                                : { type: "spring", stiffness: 200, damping: 28 }
-                            }
-                          />
-                        </div>
-                        <p className="mt-2 text-center text-[11px] font-medium text-muted">
-                          {wizardStep < WIZARD_QUESTIONS
-                            ? t("landing.wizardStepLabel", {
-                                current: wizardStep + 1,
-                                total: WIZARD_QUESTIONS,
-                              })
-                            : t("landing.wizardStepDone")}
-                        </p>
-                      </div>
-
-                      {/* Tall enough for wrapped category chips so the card does not grow when moving to step 2 */}
-                      <div className="relative mt-6 min-h-[19rem] flex-1 sm:min-h-[18rem]">
-                <AnimatePresence initial={false} mode="wait">
-                  {wizardStep === 0 ? (
-                    <motion.div
-                      key="w0"
-                      initial={reduceMotion ? false : { opacity: 0, x: 12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -10 }}
-                      transition={stepTransition}
-                      className="space-y-4"
-                    >
-                      <h2 className="font-sans text-base font-bold text-fg">
-                        {t("landing.wizardQ1Title")}
-                      </h2>
-                      <p className="text-sm text-fg-secondary">
-                        {t("landing.wizardQ1Hint")}
-                      </p>
-                      <div
-                        className={`grid grid-cols-2 gap-2 sm:grid-cols-4 ${HEADER_CONTROL_SHELL} !p-1.5`}
-                        role="group"
-                        aria-label={t("landing.wizardQ1Title")}
-                      >
-                        {COUNT_OPTIONS.map((o) => {
-                          const on = countId === o.id;
-                          return (
-                            <button
-                              key={o.id}
-                              type="button"
-                              aria-pressed={on}
-                              onClick={() => {
-                                setCountId(o.id);
-                                setWizardError(null);
-                              }}
-                              className={`rounded-xl px-3 py-2.5 text-center text-sm font-semibold transition-[background,color,box-shadow] ${
-                                on
-                                  ? "bg-white/[0.14] text-fg shadow-[inset_0_0_0_1px_rgb(255_255_255/0.1)]"
-                                  : "text-fg-secondary hover:bg-white/[0.05] hover:text-fg"
-                              }`}
-                            >
-                              {t(o.labelKey)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
-                  ) : null}
-
-                  {wizardStep === 1 ? (
-                    <motion.div
-                      key="w1"
-                      initial={reduceMotion ? false : { opacity: 0, x: 12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -10 }}
-                      transition={stepTransition}
-                      className="space-y-4"
-                    >
-                      <h2 className="font-sans text-base font-bold text-fg">
-                        {t("landing.wizardQ2Title")}
-                      </h2>
-                      <p className="text-sm text-fg-secondary">
-                        {t("landing.wizardQ2Hint")}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {CATEGORY_OPTIONS.map((o) => {
-                          const on = categorySet.has(o.id);
-                          return (
-                            <button
-                              key={o.id}
-                              type="button"
-                              aria-pressed={on}
-                              onClick={() => toggleCategory(o.id)}
-                              className={`rounded-full px-3.5 py-2 text-xs font-semibold transition-[background,color,box-shadow] sm:text-sm ${
-                                on
-                                  ? "bg-accent/20 text-fg ring-1 ring-accent/40"
-                                  : "bg-white/[0.06] text-fg-secondary ring-1 ring-white/[0.08] hover:bg-white/[0.09] hover:text-fg"
-                              }`}
-                            >
-                              {t(o.labelKey)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
-                  ) : null}
-
-                  {wizardStep === 2 ? (
-                    <motion.div
-                      key="w2"
-                      initial={reduceMotion ? false : { opacity: 0, x: 12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -10 }}
-                      transition={stepTransition}
-                      className="space-y-4"
-                    >
-                      <h2 className="font-sans text-base font-bold text-fg">
-                        {t("landing.wizardQ3Title")}
-                      </h2>
-                      <p className="text-sm text-fg-secondary">
-                        {t("landing.wizardQ3Hint")}
-                      </p>
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        {BAND_OPTIONS.map((o) => {
-                          const on = bandId === o.id;
-                          return (
-                            <button
-                              key={o.id}
-                              type="button"
-                              aria-pressed={on}
-                              onClick={() => {
-                                setBandId(o.id);
-                                setWizardError(null);
-                              }}
-                              className={`rounded-xl px-4 py-3 text-left text-sm font-semibold transition-[background,color,box-shadow] ${
-                                on
-                                  ? "bg-white/[0.14] text-fg shadow-[inset_0_0_0_1px_rgb(255_255_255/0.1)]"
-                                  : "bg-white/[0.04] text-fg-secondary ring-1 ring-white/[0.07] hover:bg-white/[0.07] hover:text-fg"
-                              }`}
-                            >
-                              {t(o.labelKey)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
-                  ) : null}
-
-                  {wizardStep === 3 ? (
-                    <motion.div
-                      key="w3"
-                      initial={reduceMotion ? false : { opacity: 0, x: 12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -10 }}
-                      transition={stepTransition}
-                      className="space-y-5"
-                    >
-                      <div className="rounded-xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/[0.06]">
-                        <p className="slice-label">{t("landing.wizardSummaryIntro")}</p>
-                        <ul className="mt-2 space-y-1.5 text-sm text-fg-secondary">
-                          <li className="text-fg">
-                            {t("landing.wizardSummaryLine1", {
-                              range: summaryLines.countLabel,
-                            })}
-                          </li>
-                          <li>{summaryLines.categoriesText}</li>
-                          <li className="text-fg">
-                            {t("landing.wizardSummaryLine3", {
-                              band: summaryLines.bandLabel,
-                            })}
-                          </li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h2 className="font-sans text-base font-bold text-fg">
-                          {isSignedIn
-                            ? t("landing.wizardDoneSignedInTitle")
-                            : t("landing.wizardDoneTitle")}
-                        </h2>
-                        <p className="mt-2 text-sm leading-relaxed text-fg-secondary">
-                          {isSignedIn
-                            ? t("landing.wizardDoneSignedInBody")
-                            : t("landing.wizardDoneBody")}
-                        </p>
-                      </div>
-                      {isSignedIn ? (
-                        <Link href="/dashboard" className="slice-btn-primary w-full justify-center sm:w-auto">
-                          {t("landing.ctaDashboard")}
-                        </Link>
-                      ) : (
-                        <Link
-                          href="/login?next=/dashboard"
-                          className="slice-btn-primary w-full justify-center sm:w-auto"
-                        >
-                          {t("landing.wizardDoneCta")}
-                        </Link>
-                      )}
-                    </motion.div>
-                  ) : null}
-                </AnimatePresence>
-                      </div>
-
-                      {wizardStep < 3 ? (
-                        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-5">
-                          <button
-                            type="button"
-                            onClick={goBack}
-                            disabled={wizardStep === 0}
-                            className="slice-btn-secondary !px-4 disabled:pointer-events-none disabled:opacity-35"
-                          >
-                            {t("landing.wizardBack")}
-                          </button>
-                          <button type="button" onClick={goNext} className="slice-btn-primary !px-5">
-                            {t("landing.wizardNext")}
-                          </button>
-                        </div>
-                      ) : null}
-
-                      {wizardError ? (
-                        <p className="mt-3 text-center text-sm font-medium text-danger" role="alert">
-                          {wizardError}
-                        </p>
-                      ) : null}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
+            <div className="mx-auto w-full max-w-[27rem] shrink-0 sm:max-w-[29rem] md:mx-0 md:w-[min(100%,31rem)] md:max-w-none md:translate-y-2 lg:w-[min(100%,33rem)] lg:translate-y-3 xl:w-[min(100%,36rem)]">
+              <HeroScreenshotSlideshow t={t} className="w-full" />
             </div>
           </div>
         </section>
@@ -1065,8 +554,14 @@ export function HomeLanding({ isSignedIn }: HomeLandingProps) {
           </div>
         </section>
 
-        <footer className="border-t border-white/[0.06] py-16 sm:py-20">
-          <div className="mx-auto flex max-w-6xl flex-col items-center gap-7 px-4 text-center sm:px-6 lg:px-8">
+        <footer className="border-t border-white/[0.06]">
+          <LandingValueTicker
+            t={t}
+            isSignedIn={isSignedIn}
+            reduceMotion={Boolean(reduceMotion)}
+            onHashClick={smoothScrollId}
+          />
+          <div className="mx-auto flex max-w-6xl flex-col items-center gap-7 px-4 py-14 text-center sm:px-6 sm:py-16 lg:px-8 lg:py-20">
             <Image
               src="/logo.svg"
               alt=""

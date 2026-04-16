@@ -284,6 +284,11 @@ const en = {
   "landing.ctaStart": "Get started free",
   "landing.ctaDashboard": "Open dashboard",
   "landing.ctaScroll": "Answer a few questions",
+  "landing.heroSlideshowAria": "Slice product screenshots",
+  "landing.heroSlideshowSlideStatus": "Slide {current} of {total}",
+  "landing.heroScreenshotAlt": "Slice application screenshot {n}",
+  "landing.heroSlideshowGoTo": "Show screenshot {n}",
+  "landing.heroSlideshowDots": "Choose screenshot",
   "landing.demoTitle": "Quick scan",
   "landing.demoHint":
     "Four short steps. Your answers stay in the browser until you leave the page.",
@@ -362,6 +367,9 @@ const en = {
   "landing.footerCopyright":
     "© {year} Sven Van Leemput. All rights reserved.",
   "landing.logoAria": "Slice home",
+  "landing.tickerAria": "Quick links on this page",
+  "landing.tickerItemCta": "Start free and track properly",
+  "landing.tickerItemCtaDash": "Open your live dashboard",
 
   "notFound.title": "Page not found",
   "notFound.hint":
@@ -663,6 +671,11 @@ const nl: Record<MessageKey, string> = {
   "landing.ctaStart": "Gratis beginnen",
   "landing.ctaDashboard": "Dashboard openen",
   "landing.ctaScroll": "Beantwoord een paar vragen",
+  "landing.heroSlideshowAria": "Productscreenshots van Slice",
+  "landing.heroSlideshowSlideStatus": "Afbeelding {current} van {total}",
+  "landing.heroScreenshotAlt": "Screenshot {n} van de Slice-app",
+  "landing.heroSlideshowGoTo": "Toon screenshot {n}",
+  "landing.heroSlideshowDots": "Kies screenshot",
   "landing.demoTitle": "Korte scan",
   "landing.demoHint":
     "Vier korte stappen. Je antwoorden blijven in je browser tot je de pagina sluit.",
@@ -742,6 +755,9 @@ const nl: Record<MessageKey, string> = {
   "landing.footerCopyright":
     "© {year} Sven Van Leemput. Alle rechten voorbehouden.",
   "landing.logoAria": "Slice startpagina",
+  "landing.tickerAria": "Snelkoppelingen op deze pagina",
+  "landing.tickerItemCta": "Gratis starten en goed bijhouden",
+  "landing.tickerItemCtaDash": "Naar je live dashboard",
 
   "notFound.title": "Pagina niet gevonden",
   "notFound.hint": "Die URL bestaat niet. Ga terug naar je dashboard.",

@@ -231,4 +231,62 @@ body {
     background: rgb(var(--slice-canvas) / 0.75);
     backdrop-filter: blur(20px) saturate(1.2);
   }
+
+  /* Landing ticker: GPU-friendly loop; JS omits animated track when reduced motion is on. */
+  @keyframes slice-ticker-scroll {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
+  /* Footer ticker: slow, soft edges — motion is optional garnish, not a second hero. */
+  .slice-ticker-shell-footer {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      black 14%,
+      black 86%,
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      black 14%,
+      black 86%,
+      transparent 100%
+    );
+  }
+
+  /*
+   * Base layer sets animation-duration/iteration !important under prefers-reduced-motion.
+   * Scope the marquee animation to no-preference only, and use !important so it reliably
+   * wins over the universal selector when layers/cascade order differ.
+   */
+  .slice-ticker-track-footer {
+    display: flex;
+    width: max-content;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .slice-ticker-track-footer {
+      animation: slice-ticker-scroll 96s linear infinite !important;
+      will-change: transform;
+    }
+
+    .slice-ticker-shell-footer:is(:hover, :focus-within) .slice-ticker-track-footer {
+      animation-play-state: paused;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slice-ticker-track-footer {
+      animation: none !important;
+    }
+  }
 }
