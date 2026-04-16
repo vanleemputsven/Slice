@@ -4,7 +4,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { safeNextPath } from "@/lib/auth/safe-next-path";
 import { getSupabasePublicConfig } from "@/lib/supabase/env";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/subscriptions"];
+const PROTECTED_PREFIXES = ["/dashboard", "/subscriptions", "/settings"];
 const WELCOME_PATH = "/welcome";
 
 function isProtectedPath(pathname: string): boolean {

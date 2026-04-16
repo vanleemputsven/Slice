@@ -6,7 +6,30 @@ const en = {
   "header.navMain": "Main",
   "header.navOverview": "Overview",
   "header.navSubscriptions": "Subscriptions",
+  "header.navSettings": "Settings",
   "header.greetingNamed": "Hi, {name}",
+
+  "settings.title": "Settings",
+  "settings.subtitle":
+    "Preferences that apply across your dashboard and summaries.",
+  "settings.currencySection": "Display currency",
+  "settings.currencyLabel": "Currency for dashboard amounts",
+  "settings.currencyHint":
+    "Totals, charts, and insights use this currency. Each subscription can still use its own billing currency when you edit it.",
+  "settings.previewLabel": "Preview",
+  "settings.legacyOption": "Current ({code}) — pick a standard code below",
+  "settings.deleteSection": "Account and data",
+  "settings.deleteTitle": "Delete account and all data",
+  "settings.deleteDescription":
+    "This removes your Slice account, subscriptions, and preferences from our database. You will be signed out. This cannot be undone.",
+  "settings.deleteButton": "Delete account and data",
+  "settings.deleteConfirm":
+    "Delete your account and all stored data permanently? This cannot be undone.",
+  "settings.deleteWorking": "Deleting…",
+  "settings.deleteFailed":
+    "We could not delete your account. Try again later or contact support.",
+  "settings.deleteNotConfigured":
+    "Account deletion is not available on this server (missing service configuration).",
 
   "dashboard.title": "Overview",
   "dashboard.subtitle":
@@ -251,11 +274,11 @@ const en = {
   "welcome.nameTooLong": "Please keep it to 80 characters or fewer.",
   "welcome.localeLabel": "Language in Slice",
   "welcome.currencyLabel": "Currency for amounts",
-  "welcome.currencyHint": "You can refine this anytime in your overview.",
+  "welcome.currencyHint": "You can change this anytime in Settings.",
   "welcome.submit": "Save and continue",
   "welcome.skip": "Skip for now",
   "welcome.skipHint":
-    "Totally fine—you can add this later from your overview whenever you like.",
+    "Totally fine—you can add this later from Settings whenever you like.",
   "welcome.errorSave": "Could not save. Check your connection and try again.",
   "header.signOut": "Sign out",
   "header.syncErrorAria": "Data sync notice",
@@ -389,7 +412,30 @@ const nl: Record<MessageKey, string> = {
   "header.navMain": "Hoofdmenu",
   "header.navOverview": "Overzicht",
   "header.navSubscriptions": "Abonnementen",
+  "header.navSettings": "Instellingen",
   "header.greetingNamed": "Hoi, {name}",
+
+  "settings.title": "Instellingen",
+  "settings.subtitle":
+    "Voorkeuren die op je dashboard en samenvattingen van toepassing zijn.",
+  "settings.currencySection": "Weergavevaluta",
+  "settings.currencyLabel": "Valuta voor dashboardbedragen",
+  "settings.currencyHint":
+    "Totalen, grafieken en inzichten gebruiken deze valuta. Per abonnement kun je bij bewerken nog steeds een eigen facturatie­valuta invullen.",
+  "settings.previewLabel": "Voorbeeld",
+  "settings.legacyOption": "Huidige ({code}) — kies hieronder een standaardcode",
+  "settings.deleteSection": "Account en gegevens",
+  "settings.deleteTitle": "Account en alle gegevens verwijderen",
+  "settings.deleteDescription":
+    "Hiermee verwijder je je Slice-account, abonnementen en voorkeuren uit onze database. Je wordt uitgelogd. Dit kan niet ongedaan worden gemaakt.",
+  "settings.deleteButton": "Account en gegevens verwijderen",
+  "settings.deleteConfirm":
+    "Je account en alle opgeslagen gegevens permanent verwijderen? Dit kan niet ongedaan worden gemaakt.",
+  "settings.deleteWorking": "Bezig met verwijderen…",
+  "settings.deleteFailed":
+    "Je account kon niet worden verwijderd. Probeer later opnieuw of neem contact op.",
+  "settings.deleteNotConfigured":
+    "Account verwijderen is op deze server niet beschikbaar (ontbrekende serviceconfiguratie).",
 
   "dashboard.title": "Overzicht",
   "dashboard.subtitle":
@@ -637,11 +683,11 @@ const nl: Record<MessageKey, string> = {
   "welcome.nameTooLong": "Houd het bij maximaal 80 tekens.",
   "welcome.localeLabel": "Taal in Slice",
   "welcome.currencyLabel": "Valuta voor bedragen",
-  "welcome.currencyHint": "Je kunt dit altijd bijstellen in je overzicht.",
+  "welcome.currencyHint": "Je kunt dit altijd wijzigen onder Instellingen.",
   "welcome.submit": "Opslaan en verder",
   "welcome.skip": "Nu overslaan",
   "welcome.skipHint":
-    "Helemaal oké—je vult het aan wanneer het uitkomt.",
+    "Helemaal oké—je vult het later aan via Instellingen wanneer het uitkomt.",
   "welcome.errorSave":
     "Opslaan lukte niet. Controleer je verbinding en probeer opnieuw.",
   "header.signOut": "Uitloggen",

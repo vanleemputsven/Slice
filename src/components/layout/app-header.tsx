@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, List, LogOut } from "lucide-react";
+import { LayoutGrid, List, LogOut, Settings } from "lucide-react";
 import { SliceMark } from "@/components/brand/slice-mark";
 import { LanguageToggle } from "@/components/layout/language-toggle";
 import { HEADER_CONTROL_SHELL } from "@/components/layout/header-controls";
@@ -85,6 +85,11 @@ export function AppHeader() {
               "/subscriptions",
               t("header.navSubscriptions"),
               <List className="size-4" aria-hidden />
+            )}
+            {item(
+              "/settings",
+              t("header.navSettings"),
+              <Settings className="size-4" aria-hidden />
             )}
           </nav>
           <LanguageToggle />

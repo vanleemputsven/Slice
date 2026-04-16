@@ -17,7 +17,7 @@ export const welcomeCurrencyCodes = [
 
 export type WelcomeCurrencyCode = (typeof welcomeCurrencyCodes)[number];
 
-const welcomeCurrencySchema = z.enum(welcomeCurrencyCodes);
+export const welcomeCurrencySchema = z.enum(welcomeCurrencyCodes);
 
 export const welcomeProfileFormSchema = z.object({
   preferredName: z

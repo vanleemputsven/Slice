@@ -26,6 +26,7 @@
 
 - **RLS** is the source of truth for authorization; policies are defined in SQL, not only in the app.
 - **Never** embed the Supabase `service_role` key in client or public env vars.
+- **Account deletion** (`/settings`): the server action `deleteUserAccount` uses **`SUPABASE_SERVICE_ROLE_KEY`** only on the server to call `auth.admin.deleteUser`. Postgres `ON DELETE CASCADE` from `auth.users` removes `user_preferences` and `subscriptions`. If the key is absent, the UI shows that deletion is unavailable—do not expose the key to the browser.
 - Middleware uses `auth.getUser()` so the session is **verified** before treating routes as authenticated (aligned with current Supabase SSR guidance).
 - If public Supabase env vars are missing, **protected routes** redirect to `/login` with `error=config` instead of failing open.
 
@@ -35,7 +36,7 @@
 
 ## Supabase project checklist
 
-1. Create a project and copy **URL** + **publishable/anon** key into `.env.local` (see `.env.example`).
+1. Create a project and copy **URL** + **publishable/anon** key into `.env.local`. For self-service **account deletion** in Settings, also set **`SUPABASE_SERVICE_ROLE_KEY`** on the server (Dashboard → Settings → API → service_role); keep it out of client bundles and git.
 2. Run the SQL in `supabase/migrations/` in order (initial schema, then `20260330120000_user_preferences_welcome.sql` for the welcome step), via SQL Editor or `supabase db push`.
 3. **Authentication → URL configuration**: add redirect URLs `http://localhost:3000/auth/callback` and your production `/auth/callback`.
 4. If the trigger fails to create with `execute function`, use `execute procedure public.handle_new_user();` for older Postgres builds.
