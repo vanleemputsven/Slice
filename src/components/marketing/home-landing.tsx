@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -25,6 +26,7 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { AppLocale } from "@/lib/i18n/locale";
@@ -32,6 +34,12 @@ import { sliceT, type SliceMessageKey } from "@/lib/i18n/messages";
 import { HEADER_CONTROL_SHELL } from "@/components/layout/header-controls";
 import { HeroScreenshotSlideshow } from "@/components/marketing/hero-screenshot-slideshow";
 import { LandingValueTicker } from "@/components/marketing/landing-value-ticker";
+
+const GeodeHeroCanvas = dynamic(
+  () =>
+    import("@/components/marketing/geode-hero-canvas").then((m) => m.GeodeHeroCanvas),
+  { ssr: false }
+);
 
 const LOGIN_LOCALE_KEY = "slice-login-locale";
 
@@ -59,6 +67,7 @@ export function HomeLanding({ isSignedIn }: HomeLandingProps) {
   const [mounted, setMounted] = useState(false);
   const [activeSection, setActiveSection] = useState<SectionId | null>(null);
 
+  const heroPointerRef = useRef({ x: 0.5, y: 0.32 });
   const mouseX = useMotionValue(0.5);
   const mouseY = useMotionValue(0.32);
   const springX = useSpring(mouseX, { stiffness: 80, damping: 28 });
@@ -172,13 +181,14 @@ export function HomeLanding({ isSignedIn }: HomeLandingProps) {
 
   const onHeroPointer = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
-      if (reduceMotion) return;
       const el = e.currentTarget;
       const r = el.getBoundingClientRect();
-      const x = (e.clientX - r.left) / r.width;
-      const y = (e.clientY - r.top) / r.height;
-      mouseX.set(Math.min(1, Math.max(0, x)));
-      mouseY.set(Math.min(1, Math.max(0, y)));
+      const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+      const y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+      heroPointerRef.current = { x, y };
+      if (reduceMotion) return;
+      mouseX.set(x);
+      mouseY.set(y);
     },
     [mouseX, mouseY, reduceMotion]
   );
@@ -314,22 +324,33 @@ export function HomeLanding({ isSignedIn }: HomeLandingProps) {
           className="relative mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6 sm:pb-24 sm:pt-12 lg:px-8 lg:pb-28"
           onPointerMove={onHeroPointer}
           onPointerLeave={() => {
+            heroPointerRef.current = { x: 0.5, y: 0.32 };
             mouseX.set(0.5);
             mouseY.set(0.32);
           }}
         >
+          <div
+            className="pointer-events-none absolute inset-0 z-[1] overflow-hidden [mask-image:linear-gradient(180deg,black_0%,black_50%,transparent_92%)]"
+            aria-hidden
+          >
+            <GeodeHeroCanvas
+              className="absolute inset-0 size-full min-h-[26rem] sm:min-h-[30rem]"
+              pointerRef={heroPointerRef}
+              paused={Boolean(reduceMotion)}
+            />
+          </div>
           <motion.div
             aria-hidden
-            className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-accent/20 blur-3xl"
+            className="pointer-events-none absolute -left-24 top-0 z-[2] h-72 w-72 rounded-full bg-accent/20 blur-3xl"
             style={reduceMotion ? undefined : { y: heroBlobY }}
           />
           <motion.div
-            className="pointer-events-none absolute inset-0 opacity-90"
+            className="pointer-events-none absolute inset-0 z-[2] opacity-90"
             aria-hidden
             style={{ backgroundImage: spotlight }}
           />
 
-          <div className="relative flex flex-col items-stretch gap-9 md:flex-row md:items-center md:justify-between md:gap-10 lg:gap-12 xl:gap-14">
+          <div className="relative z-[3] flex flex-col items-stretch gap-9 md:flex-row md:items-center md:justify-between md:gap-10 lg:gap-12 xl:gap-14">
             <div className="flex min-w-0 max-w-2xl flex-col justify-center md:py-1 lg:py-4">
               <motion.p
                 className="w-fit font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-bright"
