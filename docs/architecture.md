@@ -38,7 +38,7 @@
 
 1. Create a project and copy **URL** + **publishable/anon** key into `.env.local`. For self-service **account deletion** in Settings, also set **`SUPABASE_SERVICE_ROLE_KEY`** on the server (Dashboard → Settings → API → service_role); keep it out of client bundles and git.
 2. Run the SQL in `supabase/migrations/` in order (initial schema, then `20260330120000_user_preferences_welcome.sql` for the welcome step), via SQL Editor or `supabase db push`.
-3. **Authentication → URL configuration**: add redirect URLs `http://localhost:3000/auth/callback` and your production `/auth/callback`.
+3. **Authentication → URL configuration**: add redirect URLs `http://localhost:3000/auth/callback` and your production `/auth/callback`. Enable social providers in the dashboard as needed (e.g. Google, GitHub); see `docs/google-oauth.md` and `docs/github-oauth.md`.
 4. If the trigger fails to create with `execute function`, use `execute procedure public.handle_new_user();` for older Postgres builds.
 
 **Note:** Next.js 16 may log that the `middleware` file convention is deprecated in favor of `proxy`. Session refresh still works; migrate when you adopt the new convention.

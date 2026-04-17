@@ -57,7 +57,9 @@ export function LoginForm() {
   const [feedback, setFeedback] = useState<AuthFeedback | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [oauthProviderLoading, setOauthProviderLoading] = useState<
+    null | "google" | "github"
+  >(null);
 
   const t = useCallback(
     (key: SliceMessageKey, vars?: Record<string, string | number>) =>
@@ -130,38 +132,46 @@ export function LoginForm() {
     setShowPasswordConfirm(false);
   }
 
-  const signInWithGoogle = useCallback(async () => {
-    setFeedback(null);
-    setGoogleLoading(true);
-    try {
-      getSupabasePublicConfig();
-    } catch {
-      setFeedback({ kind: "error", text: t("auth.configError") });
-      setGoogleLoading(false);
-      return;
-    }
+  const signInWithOAuthProvider = useCallback(
+    async (provider: "google" | "github") => {
+      setFeedback(null);
+      setOauthProviderLoading(provider);
+      try {
+        getSupabasePublicConfig();
+      } catch {
+        setFeedback({ kind: "error", text: t("auth.configError") });
+        setOauthProviderLoading(null);
+        return;
+      }
 
-    const supabase = createClient();
-    const origin = window.location.origin;
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`,
-      },
-    });
+      const supabase = createClient();
+      const origin = window.location.origin;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`,
+        },
+      });
 
-    if (error) {
-      setFeedback({ kind: "error", text: t("auth.googleSignInFailed") });
-      setGoogleLoading(false);
-      return;
-    }
-    if (data.url) {
-      window.location.assign(data.url);
-      return;
-    }
-    setFeedback({ kind: "error", text: t("auth.googleSignInFailed") });
-    setGoogleLoading(false);
-  }, [safeNext, t]);
+      const failKey =
+        provider === "google"
+          ? "auth.googleSignInFailed"
+          : "auth.githubSignInFailed";
+
+      if (error) {
+        setFeedback({ kind: "error", text: t(failKey) });
+        setOauthProviderLoading(null);
+        return;
+      }
+      if (data.url) {
+        window.location.assign(data.url);
+        return;
+      }
+      setFeedback({ kind: "error", text: t(failKey) });
+      setOauthProviderLoading(null);
+    },
+    [safeNext, t]
+  );
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFeedback(null);
@@ -411,47 +421,87 @@ export function LoginForm() {
               ) : null}
             </AnimatePresence>
 
-            <motion.button
-              type="button"
-              disabled={googleLoading}
-              onClick={() => void signInWithGoogle()}
-              className="slice-btn-secondary mt-6 flex w-full items-center justify-center gap-2.5 disabled:pointer-events-none disabled:opacity-60"
-              whileTap={
-                reduceMotion || googleLoading ? undefined : { scale: 0.98 }
-              }
-              aria-busy={googleLoading}
-            >
-              {googleLoading ? (
-                <Loader2
-                  className="size-4 shrink-0 animate-spin"
-                  aria-hidden
-                />
-              ) : (
-                <svg
-                  className="size-[1.15rem] shrink-0"
-                  aria-hidden
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+            <div className="mt-6 flex flex-col gap-3">
+              <motion.button
+                type="button"
+                disabled={oauthProviderLoading !== null}
+                onClick={() => void signInWithOAuthProvider("google")}
+                className="slice-btn-secondary flex w-full items-center justify-center gap-2.5 disabled:pointer-events-none disabled:opacity-60"
+                whileTap={
+                  reduceMotion || oauthProviderLoading !== null
+                    ? undefined
+                    : { scale: 0.98 }
+                }
+                aria-busy={oauthProviderLoading === "google"}
+              >
+                {oauthProviderLoading === "google" ? (
+                  <Loader2
+                    className="size-4 shrink-0 animate-spin"
+                    aria-hidden
                   />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                ) : (
+                  <svg
+                    className="size-[1.15rem] shrink-0"
+                    aria-hidden
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    />
+                  </svg>
+                )}
+                {oauthProviderLoading === "google"
+                  ? t("auth.loading")
+                  : t("auth.continueWithGoogle")}
+              </motion.button>
+
+              <motion.button
+                type="button"
+                disabled={oauthProviderLoading !== null}
+                onClick={() => void signInWithOAuthProvider("github")}
+                className="slice-btn-secondary flex w-full items-center justify-center gap-2.5 disabled:pointer-events-none disabled:opacity-60"
+                whileTap={
+                  reduceMotion || oauthProviderLoading !== null
+                    ? undefined
+                    : { scale: 0.98 }
+                }
+                aria-busy={oauthProviderLoading === "github"}
+              >
+                {oauthProviderLoading === "github" ? (
+                  <Loader2
+                    className="size-4 shrink-0 animate-spin"
+                    aria-hidden
                   />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  />
-                </svg>
-              )}
-              {googleLoading ? t("auth.loading") : t("auth.continueWithGoogle")}
-            </motion.button>
+                ) : (
+                  <svg
+                    className="size-[1.15rem] shrink-0 text-fg"
+                    aria-hidden
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      fill="currentColor"
+                      d="M12 .5C5.65.5.5 5.65.5 12c0 5.1 3.29 9.43 7.86 10.96.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.72 1.26 3.38.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.68 0-1.26.45-2.28 1.18-3.09-.12-.29-.51-1.47.11-3.06 0 0 .96-.31 3.16 1.18a10.9 10.9 0 0 1 2.88-.39c.98 0 1.97.13 2.9.39 2.19-1.49 3.15-1.18 3.15-1.18.62 1.59.23 2.77.12 3.06.74.81 1.18 1.83 1.18 3.09 0 4.42-2.7 5.38-5.28 5.67.42.36.8 1.08.8 2.18 0 1.57-.02 2.84-.02 3.23 0 .31.21.68.8.56A10.52 10.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"
+                    />
+                  </svg>
+                )}
+                {oauthProviderLoading === "github"
+                  ? t("auth.loading")
+                  : t("auth.continueWithGitHub")}
+              </motion.button>
+            </div>
 
             <div
               className="relative mt-6 flex items-center gap-3 text-xs font-medium uppercase tracking-[0.14em] text-muted"

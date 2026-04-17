@@ -247,6 +247,9 @@ const en = {
   "auth.continueWithGoogle": "Continue with Google",
   "auth.googleSignInFailed":
     "Google sign-in did not start. Check Supabase and Google OAuth settings.",
+  "auth.continueWithGitHub": "Continue with GitHub",
+  "auth.githubSignInFailed":
+    "GitHub sign-in did not start. Check Supabase and GitHub OAuth settings.",
   "auth.orDivider": "or",
   "welcome.kicker": "You're in",
   "welcome.stepLabel": "Step {current} of {total}",
@@ -657,6 +660,9 @@ const nl: Record<MessageKey, string> = {
   "auth.continueWithGoogle": "Doorgaan met Google",
   "auth.googleSignInFailed":
     "Inloggen met Google lukte niet. Controleer Supabase en Google OAuth.",
+  "auth.continueWithGitHub": "Doorgaan met GitHub",
+  "auth.githubSignInFailed":
+    "Inloggen met GitHub lukte niet. Controleer Supabase en GitHub OAuth.",
   "auth.orDivider": "of",
   "welcome.kicker": "Fijn dat je er bent",
   "welcome.stepLabel": "Stap {current} van {total}",

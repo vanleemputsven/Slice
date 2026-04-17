@@ -29,6 +29,10 @@ Slice uses [Supabase Auth](https://supabase.com/docs/guides/auth/social-login/au
 
 Mismatch secrets, redirect allow list, or Google redirect URI are the usual causes of “redirect_uri_mismatch” or silent failures.
 
+## See also
+
+- GitHub uses the same app callback and `/auth/callback` flow: `docs/github-oauth.md`.
+
 ## Security notes
 
 - Keep using the **anon** key in the browser; never expose the **service role** key client-side.
