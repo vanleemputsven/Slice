@@ -115,7 +115,7 @@ export function MonthlyShareExplorer({
           >
             {t("explorer.monthlyTitle")}
           </p>
-          <p className="mt-1 font-mono text-3xl font-semibold tabular-nums tracking-tight text-fg sm:text-4xl">
+          <p className="mt-1 font-mono text-2xl font-semibold tabular-nums tracking-tight text-fg">
             {formatCurrency(total, currency, numberLoc)}
             <span className="ml-2 text-lg font-normal text-fg-secondary sm:text-xl">
               {t("explorer.perMo")}

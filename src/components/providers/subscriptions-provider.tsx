@@ -21,10 +21,12 @@ import {
   type PreferencesRow,
   type SubscriptionRow,
 } from "@/lib/supabase/maps";
+import { takeFirstListDraft } from "@/lib/subscriptions/first-list";
 import { createSeedSubscriptions } from "@/lib/subscriptions/seed";
 import type { AuthenticatedSliceSnapshot } from "@/lib/subscriptions/authenticated-slice-snapshot";
 import {
   defaultPreferences,
+  preferencesSchema,
   type Preferences,
 } from "@/lib/validation/preferences";
 import {
@@ -44,6 +46,7 @@ type SubscriptionsContextValue = {
   clearSyncError: () => void;
   setHourlyWage: (value: number | null) => void;
   setHoursPerWorkday: (value: number) => void;
+  setReminderLeadDays: (value: number) => void;
   setCurrency: (code: string) => void;
   setLocale: (locale: AppLocale) => void;
   addSubscription: (input: SubscriptionFormInput) => void;
@@ -52,6 +55,7 @@ type SubscriptionsContextValue = {
   replaceSubscriptions: (next: SubscriptionRecord[]) => void;
   resetToDemo: () => void;
   clearAll: () => void;
+  reloadSlice: () => Promise<void>;
 };
 
 const SubscriptionsContext = createContext<SubscriptionsContextValue | null>(
@@ -150,6 +154,9 @@ export function SubscriptionsProvider({
   const prefFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
+  /** Local edits win over a later layout snapshot. Welcome reloads before this counts. */
+  const localPreferenceGeneration = useRef(0);
+  const appliedServerStamp = useRef<string | null>(null);
   const localeRef = useRef<AppLocale>("en");
   localeRef.current = preferences.locale;
 
@@ -208,6 +215,49 @@ export function SubscriptionsProvider({
     let cancelled = false;
     const authHydrationGenRef = { current: 0 };
 
+    async function subscriptionsWithFirstList(
+      userId: string,
+      slice: { subscriptions: SubscriptionRecord[]; preferences: Preferences }
+    ): Promise<SubscriptionRecord[]> {
+      if (slice.subscriptions.length > 0) return slice.subscriptions;
+      const drafts = takeFirstListDraft();
+      if (!drafts) return slice.subscriptions;
+      const now = new Date().toISOString();
+      const currency = slice.preferences.currency.slice(0, 3).toUpperCase();
+      const records = drafts.map((row) =>
+        toRecord(
+          {
+            name: row.name,
+            provider: row.name,
+            iconKey: "",
+            category: row.category,
+            billingCycle: row.billingCycle,
+            customPeriodMonths: undefined,
+            totalPrice: row.totalPrice,
+            currency,
+            shared: false,
+            shareCount: undefined,
+            nextPaymentDate: row.nextPaymentDate,
+            notes: "",
+            active: true,
+            reviewFlag: false,
+          },
+          crypto.randomUUID(),
+          now
+        )
+      );
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("subscriptions")
+        .insert(records.map((record) => subscriptionInsertFromRecord(userId, record)));
+      if (error) {
+        logSupabaseClientError("first list import failed", error);
+        setSaveError(slice.preferences.locale);
+        return slice.subscriptions;
+      }
+      return records;
+    }
+
     async function handleAuth(userId: string | null) {
       const myGen = ++authHydrationGenRef.current;
 
@@ -230,9 +280,11 @@ export function SubscriptionsProvider({
         setSyncError(null);
         setReady(true);
         void fetchUserSlice()
-          .then((slice) => {
+          .then(async (slice) => {
             if (cancelled || myGen !== authHydrationGenRef.current) return;
-            setSubscriptions(slice.subscriptions);
+            const subscriptions = await subscriptionsWithFirstList(userId, slice);
+            if (cancelled || myGen !== authHydrationGenRef.current) return;
+            setSubscriptions(subscriptions);
             setPreferencesState(slice.preferences);
             setSyncError(null);
           })
@@ -247,7 +299,9 @@ export function SubscriptionsProvider({
       try {
         const slice = await fetchUserSlice();
         if (cancelled || myGen !== authHydrationGenRef.current) return;
-        setSubscriptions(slice.subscriptions);
+        const withDraft = await subscriptionsWithFirstList(userId, slice);
+        if (cancelled || myGen !== authHydrationGenRef.current) return;
+        setSubscriptions(withDraft);
         setPreferencesState(slice.preferences);
         initialHydrationRef.current = true;
         setSyncError(null);
@@ -285,6 +339,48 @@ export function SubscriptionsProvider({
       cancelled = true;
       authSub.subscription.unsubscribe();
     };
+  }, [setLoadError, setSaveError]);
+
+  const serverPreferenceStamp = useMemo(() => {
+    if (!initialAuthenticatedSlice) return "";
+    const p = initialAuthenticatedSlice.preferences;
+    return [
+      initialAuthenticatedSlice.userId,
+      p.locale,
+      p.currency,
+      p.preferredName ?? "",
+      p.hourlyWage ?? "",
+      p.hoursPerWorkday,
+      p.reminderLeadDays,
+    ].join("|");
+  }, [initialAuthenticatedSlice]);
+
+  useEffect(() => {
+    if (!initialAuthenticatedSlice || serverPreferenceStamp === "") return;
+    if (appliedServerStamp.current === serverPreferenceStamp) return;
+    if (localPreferenceGeneration.current > 0) return;
+    if (prefFlushTimerRef.current) return;
+    appliedServerStamp.current = serverPreferenceStamp;
+    userIdRef.current = initialAuthenticatedSlice.userId;
+    bootstrapUserIdRef.current = initialAuthenticatedSlice.userId;
+    initialHydrationRef.current = true;
+    setPreferencesState(initialAuthenticatedSlice.preferences);
+    setReady(true);
+  }, [initialAuthenticatedSlice, serverPreferenceStamp]);
+
+  const reloadSlice = useCallback(async () => {
+    try {
+      const slice = await fetchUserSlice();
+      localPreferenceGeneration.current += 1;
+      setSubscriptions(slice.subscriptions);
+      setPreferencesState(slice.preferences);
+      initialHydrationRef.current = true;
+      setSyncError(null);
+      setReady(true);
+    } catch (e) {
+      logSupabaseClientError("data refresh failed", e);
+      setLoadError(localeRef.current);
+    }
   }, [setLoadError]);
 
   useEffect(() => {
@@ -294,6 +390,7 @@ export function SubscriptionsProvider({
 
   const setHourlyWage = useCallback(
     (value: number | null) => {
+      localPreferenceGeneration.current += 1;
       setPreferencesState((p) => {
         const next = { ...p, hourlyWage: value };
         queuePreferencePersist(next);
@@ -305,6 +402,7 @@ export function SubscriptionsProvider({
 
   const setHoursPerWorkday = useCallback(
     (value: number) => {
+      localPreferenceGeneration.current += 1;
       setPreferencesState((p) => {
         const next = { ...p, hoursPerWorkday: value };
         queuePreferencePersist(next);
@@ -314,8 +412,23 @@ export function SubscriptionsProvider({
     [queuePreferencePersist]
   );
 
+  const setReminderLeadDays = useCallback(
+    (value: number) => {
+      const parsed = preferencesSchema.shape.reminderLeadDays.safeParse(value);
+      if (!parsed.success) return;
+      localPreferenceGeneration.current += 1;
+      setPreferencesState((p) => {
+        const next = { ...p, reminderLeadDays: parsed.data };
+        queuePreferencePersist(next);
+        return next;
+      });
+    },
+    [queuePreferencePersist]
+  );
+
   const setCurrency = useCallback(
     (code: string) => {
+      localPreferenceGeneration.current += 1;
       setPreferencesState((p) => {
         const next = { ...p, currency: code.slice(0, 3).toUpperCase() };
         queuePreferencePersist(next);
@@ -329,6 +442,7 @@ export function SubscriptionsProvider({
     (locale: AppLocale) => {
       const nextLocale = appLocaleSchema.safeParse(locale);
       if (!nextLocale.success) return;
+      localPreferenceGeneration.current += 1;
       setPreferencesState((p) => {
         const next = { ...p, locale: nextLocale.data };
         queuePreferencePersist(next);
@@ -503,6 +617,7 @@ export function SubscriptionsProvider({
         setSaveError(localeRef.current);
         return;
       }
+      localPreferenceGeneration.current += 1;
       setSubscriptions([]);
       setPreferencesState(resetPrefs);
     })();
@@ -517,6 +632,7 @@ export function SubscriptionsProvider({
       clearSyncError,
       setHourlyWage,
       setHoursPerWorkday,
+      setReminderLeadDays,
       setCurrency,
       setLocale,
       addSubscription,
@@ -525,6 +641,7 @@ export function SubscriptionsProvider({
       replaceSubscriptions,
       resetToDemo,
       clearAll,
+      reloadSlice,
     }),
     [
       ready,
@@ -534,6 +651,7 @@ export function SubscriptionsProvider({
       clearSyncError,
       setHourlyWage,
       setHoursPerWorkday,
+      setReminderLeadDays,
       setCurrency,
       setLocale,
       addSubscription,
@@ -542,6 +660,7 @@ export function SubscriptionsProvider({
       replaceSubscriptions,
       resetToDemo,
       clearAll,
+      reloadSlice,
     ]
   );
 

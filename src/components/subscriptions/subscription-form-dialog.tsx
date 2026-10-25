@@ -10,6 +10,7 @@ import {
   type SubscriptionRecord,
 } from "@/lib/validation/subscription";
 import { SUBSCRIPTION_CATEGORIES } from "@/lib/subscriptions/categories";
+import { formatCalendarDate } from "@/lib/subscriptions/calculations";
 import { subscriptionCategoryLabel } from "@/lib/i18n/category-labels";
 import { useSliceT } from "@/lib/i18n/use-slice-t";
 import { useSubscriptions } from "@/components/providers/subscriptions-provider";
@@ -33,7 +34,7 @@ const emptyDefaults = (currencyCode: string): SubscriptionFormInput => ({
   currency: currencyCode.slice(0, 3).toUpperCase(),
   shared: false,
   shareCount: undefined,
-  nextPaymentDate: new Date().toISOString().slice(0, 10),
+  nextPaymentDate: formatCalendarDate(new Date()),
   notes: "",
   active: true,
   reviewFlag: false,

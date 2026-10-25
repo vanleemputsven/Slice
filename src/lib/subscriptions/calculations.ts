@@ -49,6 +49,21 @@ function startOfDay(d: Date): Date {
   return x;
 }
 
+/** A stored `YYYY-MM-DD` is that calendar day, not UTC midnight. */
+function parseCalendarDate(iso: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!match) return new Date(Number.NaN);
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+/** Local calendar day. `toISOString().slice(0, 10)` is the UTC day and can be yesterday or tomorrow. */
+export function formatCalendarDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 function addMonths(date: Date, months: number): Date {
   const d = new Date(date);
   const day = d.getDate();
@@ -57,12 +72,28 @@ function addMonths(date: Date, months: number): Date {
   return d;
 }
 
+/** The charge date after `dueOn`, one cycle later. Recording a charge stores this. */
+export function nextCycleDate(
+  sub: Pick<SubscriptionRecord, "billingCycle" | "customPeriodMonths">,
+  dueOn: string
+): string | null {
+  const due = parseCalendarDate(dueOn);
+  if (Number.isNaN(due.getTime())) return null;
+  const months =
+    sub.billingCycle === "yearly"
+      ? 12
+      : sub.billingCycle === "custom"
+        ? Math.max(1, sub.customPeriodMonths ?? 1)
+        : 1;
+  return formatCalendarDate(addMonths(due, months));
+}
+
 /** Next occurrence of payment on or after `from` based on billing cycle. */
 export function getNextPaymentOnOrAfter(
   sub: SubscriptionRecord,
   from: Date
 ): Date {
-  const anchor = startOfDay(new Date(sub.nextPaymentDate));
+  const anchor = startOfDay(parseCalendarDate(sub.nextPaymentDate));
   if (anchor >= startOfDay(from)) return anchor;
 
   let cursor = new Date(anchor);
@@ -135,6 +166,58 @@ export function burnRateHours(
 ): number | null {
   if (hourlyWage <= 0) return null;
   return monthlyPersonalSpend / hourlyWage;
+}
+
+/** Days, including today, that a charge stays on the renewal horizon. */
+export const RENEWAL_HORIZON_DAYS = 14;
+
+/** Days before a charge, including the due date, that Slice marks it. */
+export const REMINDER_LEAD_DAYS = 3;
+
+export type RenewalCharge = {
+  subscriptionId: string;
+  dueOn: string;
+  daysUntil: number;
+  personalShare: number;
+  insideReminderLead: boolean;
+};
+
+/** Money that leaves on the charge date. Not the monthly share. */
+export function getPersonalShare(sub: SubscriptionRecord): number {
+  if (!sub.active) return 0;
+  if (!sub.shared) return sub.totalPrice;
+  const people = sub.shareCount ?? 1;
+  return sub.totalPrice / people;
+}
+
+export function listRenewalHorizon(
+  subs: SubscriptionRecord[],
+  from: Date,
+  reminderLeadDays: number = REMINDER_LEAD_DAYS
+): RenewalCharge[] {
+  const charges: RenewalCharge[] = [];
+
+  for (const sub of subs) {
+    if (!sub.active) continue;
+    const due = getNextPaymentOnOrAfter(sub, from);
+    if (Number.isNaN(due.getTime())) continue;
+    const until = daysUntil(due, from);
+    if (until < 0 || until > RENEWAL_HORIZON_DAYS) continue;
+    charges.push({
+      subscriptionId: sub.id,
+      dueOn: formatCalendarDate(due),
+      daysUntil: until,
+      personalShare: getPersonalShare(sub),
+      insideReminderLead: until <= reminderLeadDays,
+    });
+  }
+
+  charges.sort(
+    (a, b) =>
+      a.daysUntil - b.daysUntil ||
+      a.subscriptionId.localeCompare(b.subscriptionId)
+  );
+  return charges;
 }
 
 export function burnRateWorkdays(

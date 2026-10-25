@@ -48,7 +48,7 @@ export function SettingsClient() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-3xl font-bold leading-tight tracking-tight text-fg sm:text-4xl">
+        <h1 className="text-2xl font-semibold leading-tight tracking-tight text-fg">
           {t("settings.title")}
         </h1>
         <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-fg-secondary">
@@ -100,7 +100,7 @@ export function SettingsClient() {
           </div>
 
           <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+            <p className="slice-label">
               {t("settings.previewLabel")}
             </p>
             <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-fg">

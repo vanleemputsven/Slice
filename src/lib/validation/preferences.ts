@@ -4,6 +4,7 @@ import { appLocaleSchema } from "@/lib/i18n/locale";
 export const preferencesSchema = z.object({
   hourlyWage: z.coerce.number().min(0).max(10_000).nullable(),
   hoursPerWorkday: z.coerce.number().min(1).max(24).default(8),
+  reminderLeadDays: z.coerce.number().int().min(0).max(14).default(3),
   currency: z.string().length(3).default("USD"),
   locale: appLocaleSchema.default("en"),
   preferredName: z.string().max(80).nullable().default(null),

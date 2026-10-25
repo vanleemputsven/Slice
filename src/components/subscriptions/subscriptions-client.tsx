@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Pencil, Plus, RotateCcw, Share2, Trash2 } from "lucide-react";
+import { Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useSubscriptions } from "@/components/providers/subscriptions-provider";
+import { GuidedAddDialog } from "@/components/subscriptions/guided-add-dialog";
 import { ProviderAvatar } from "@/components/subscriptions/provider-avatar";
 import { SubscriptionFormDialog } from "@/components/subscriptions/subscription-form-dialog";
 import { SubscriptionsSkeleton } from "@/components/subscriptions/subscriptions-skeleton";
@@ -13,10 +14,13 @@ import type {
 } from "@/lib/validation/subscription";
 import {
   daysUntil,
+  formatCalendarDate,
   getMonthlyMyShare,
   getMonthlyTotalPrice,
   getNextPaymentOnOrAfter,
+  nextCycleDate,
 } from "@/lib/subscriptions/calculations";
+import { matchesRegisterQuery } from "@/lib/subscriptions/register";
 import { SUBSCRIPTION_CATEGORIES } from "@/lib/subscriptions/categories";
 import { formatCurrency } from "@/lib/utils/currency";
 import { subscriptionCategoryLabel } from "@/lib/i18n/category-labels";
@@ -73,15 +77,17 @@ export function SubscriptionsClient() {
   };
 
   const [sort, setSort] = useState<SortKey>("next");
+  const [query, setQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterShared, setFilterShared] = useState<FilterShared>("all");
   const [formOpen, setFormOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [editing, setEditing] = useState<SubscriptionRecord | null>(null);
 
   const cur = preferences.currency ?? "USD";
 
   const filteredSorted = useMemo(() => {
-    let rows = [...subscriptions];
+    let rows = subscriptions.filter((s) => matchesRegisterQuery(s, query));
     if (filterCategory !== "all") {
       rows = rows.filter((s) => s.category === filterCategory);
     }
@@ -105,7 +111,7 @@ export function SubscriptionsClient() {
       return a.name.localeCompare(b.name);
     });
     return rows;
-  }, [subscriptions, filterCategory, filterShared, sort]);
+  }, [subscriptions, query, filterCategory, filterShared, sort]);
 
   useEffect(() => {
     if (!ready || !highlightId) return;
@@ -125,7 +131,7 @@ export function SubscriptionsClient() {
     <div className="space-y-8">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold leading-tight tracking-tight text-fg sm:text-4xl">
+          <h1 className="text-2xl font-semibold leading-tight tracking-tight text-fg">
             {t("subs.title")}
           </h1>
           <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-fg-secondary">
@@ -138,7 +144,8 @@ export function SubscriptionsClient() {
             className="slice-btn-secondary"
             onClick={() => {
               setEditing(null);
-              setFormOpen(true);
+              setFormOpen(false);
+              setGuideOpen(true);
             }}
           >
             <Plus className="size-4" aria-hidden />
@@ -169,6 +176,16 @@ export function SubscriptionsClient() {
         </div>
       </header>
 
+      <GuidedAddDialog
+        open={guideOpen}
+        onClose={() => setGuideOpen(false)}
+        onSubmit={(values) => addSubscription(values)}
+        onFullForm={() => {
+          setGuideOpen(false);
+          setEditing(null);
+          setFormOpen(true);
+        }}
+      />
       <SubscriptionFormDialog
         open={formOpen}
         onClose={() => {
@@ -192,7 +209,8 @@ export function SubscriptionsClient() {
               className="slice-btn-primary"
               onClick={() => {
                 setEditing(null);
-                setFormOpen(true);
+                setFormOpen(false);
+                setGuideOpen(true);
               }}
             >
               {t("subs.addSubscription")}
@@ -213,6 +231,19 @@ export function SubscriptionsClient() {
             role="region"
             aria-label={t("subs.filterRegion")}
           >
+            <label className="mb-4 block max-w-sm">
+              <span className="slice-label" id="subs-search-label">
+                {t("subs.searchLabel")}
+              </span>
+              <input
+                type="search"
+                className="slice-input"
+                aria-labelledby="subs-search-label"
+                placeholder={t("subs.searchPlaceholder")}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </label>
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:gap-8">
               <div className="min-w-0 flex-1">
                 <p id="subs-filter-cat" className="slice-label mb-2">
@@ -349,11 +380,23 @@ export function SubscriptionsClient() {
                   </tr>
                 </thead>
                 <tbody>
+                  {filteredSorted.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={8}
+                        className="px-4 py-8 text-sm text-fg-secondary"
+                      >
+                        {t("subs.noMatches")}
+                      </td>
+                    </tr>
+                  ) : null}
                   {filteredSorted.map((s) => {
                     const next = getNextPaymentOnOrAfter(s, new Date());
                     const d = daysUntil(next, new Date());
-                    const soon =
-                      s.active && d >= 0 && d <= 7 ? "text-warning" : "text-muted";
+                    const marked =
+                      s.active &&
+                      d >= 0 &&
+                      d <= preferences.reminderLeadDays;
                     return (
                       <tr
                         key={s.id}
@@ -366,7 +409,12 @@ export function SubscriptionsClient() {
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <ProviderAvatar provider={s.provider} size="sm" />
+                            <ProviderAvatar
+                              name={s.name}
+                              provider={s.provider}
+                              iconKey={s.iconKey}
+                              size="sm"
+                            />
                             <div>
                               <p className="font-medium text-fg">
                                 {s.name}
@@ -402,7 +450,11 @@ export function SubscriptionsClient() {
                         <td className="px-4 py-3 font-mono tabular-nums font-semibold text-fg">
                           {formatCurrency(getMonthlyMyShare(s), cur, numberLoc)}
                         </td>
-                        <td className={`px-4 py-3 tabular-nums ${soon}`}>
+                        <td
+                          className={`px-4 py-3 tabular-nums ${
+                            marked ? "text-accent" : "text-muted"
+                          }`}
+                        >
                           {next.toLocaleDateString(dateLoc, {
                             month: "short",
                             day: "numeric",
@@ -417,8 +469,7 @@ export function SubscriptionsClient() {
                         </td>
                         <td className="px-4 py-3">
                           {s.shared ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2.5 py-1 text-[11px] font-semibold text-accent-bright">
-                              <Share2 className="size-3.5" aria-hidden />
+                            <span className="font-mono text-sm tabular-nums text-fg">
                               ÷{s.shareCount ?? "—"}
                             </span>
                           ) : (
@@ -427,6 +478,38 @@ export function SubscriptionsClient() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-1">
+                            {s.active ? (
+                              <button
+                                type="button"
+                                className="rounded-lg px-2 py-2 text-xs font-semibold text-fg-secondary hover:bg-surface-alt hover:text-fg"
+                                aria-label={t("dashboard.horizonRecordAria", {
+                                  name: s.name,
+                                })}
+                                onClick={() => {
+                                  const dueOn = formatCalendarDate(next);
+                                  const advanced = nextCycleDate(s, dueOn);
+                                  if (!advanced) return;
+                                  updateSubscription(s.id, {
+                                    name: s.name,
+                                    provider: s.provider,
+                                    iconKey: s.iconKey ?? "",
+                                    category: s.category,
+                                    billingCycle: s.billingCycle,
+                                    customPeriodMonths: s.customPeriodMonths,
+                                    totalPrice: s.totalPrice,
+                                    currency: s.currency,
+                                    shared: s.shared,
+                                    shareCount: s.shareCount,
+                                    nextPaymentDate: advanced,
+                                    notes: s.notes ?? "",
+                                    active: s.active,
+                                    reviewFlag: s.reviewFlag ?? false,
+                                  });
+                                }}
+                              >
+                                {t("dashboard.horizonRecord")}
+                              </button>
+                            ) : null}
                             <button
                               type="button"
                               className="rounded-lg p-2 text-muted hover:bg-surface-alt hover:text-fg"

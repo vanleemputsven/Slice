@@ -13,4 +13,4 @@ The dashboard already shows totals in cards and charts. This block answers a dif
 
 ## Placement
 
-Rendered at the **top** of the dashboard (`DashboardClient`), above the “Overview” heading, so the primary interactive story loads first.
+Rendered directly under the page title, after the renewal horizon. The horizon is the time-sensitive reason to open the dashboard. This block answers a different question: **how each subscription contributes to the monthly number you pay**.

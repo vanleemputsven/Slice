@@ -18,13 +18,15 @@
 
 - Subscriptions are **normalized records** (`SubscriptionRecord`); monthly burn uses **cycle normalization** (monthly / yearly / N-month custom) before share-splitting.
 - **Share-Check**: when `shared` is true, `shareCount` is people in the split (including the user); personal monthly share is `(monthly total) / shareCount`.
+- **Renewal horizon**: the next 14 days use the personal share of the cycle price (the charge), not the monthly share. A charge inside three days is marked in the dashboard. See `docs/renewal-horizon.md` and `docs/adr/0001-charge-is-the-personal-share.md`.
 - **Persistence**: `subscriptions` and `user_preferences` tables in Postgres. A **trigger** on `auth.users` inserts a default `user_preferences` row for new sign-ups. New accounts start with **no subscriptions** (demo data is opt-in via “sample data” in the UI).
-- **Server hydration**: `loadAuthenticatedSlice()` in the root layout reads the same slice the client would fetch (`getUser` + RLS-scoped rows) and passes it into `SubscriptionsProvider`, so **locale, currency, and subscription rows** match the database on first paint; the client still refreshes in the background after auth resolves.
+- **Server hydration**: `loadAuthenticatedSlice()` in the root layout reads the same slice the client would fetch (`getUser` + RLS-scoped rows) and passes it into `SubscriptionsProvider`, so **locale, currency, and subscription rows** match the database on first paint. The provider lives in the root layout, so it does not remount when welcome finishes. A newer server snapshot is applied only before the person edits preferences locally. Welcome calls `reloadSlice()` after a successful save or skip, so Dutch and euro are not stuck on the defaults from the pre-welcome layout.
 - **First-run welcome** (`/welcome`): New preference columns `preferred_name` (optional) and `welcome_completed_at` gate access to `/dashboard` and `/subscriptions` until the user **saves** or **skips** (middleware checks the flag). Existing users were backfilled with `welcome_completed_at` set so they are not interrupted. Copy and UI mirror the login card for consistency.
 
 ## Security notes
 
-- **RLS** is the source of truth for authorization; policies are defined in SQL, not only in the app.
+- **RLS** is the source of truth for authorization; policies are defined in SQL, not only in the app. Policies call `(select auth.uid())` so Postgres evaluates the user once per statement.
+- **`handle_new_user`** is a trigger on `auth.users`. `EXECUTE` is revoked from `public`, `anon`, and `authenticated`, so it is not an RPC on the Data API.
 - **Never** embed the Supabase `service_role` key in client or public env vars.
 - **Account deletion** (`/settings`): the server action `deleteUserAccount` uses **`SUPABASE_SERVICE_ROLE_KEY`** only on the server to call `auth.admin.deleteUser`. Postgres `ON DELETE CASCADE` from `auth.users` removes `user_preferences` and `subscriptions`. If the key is absent, the UI shows that deletion is unavailable—do not expose the key to the browser.
 - Middleware uses `auth.getUser()` so the session is **verified** before treating routes as authenticated (aligned with current Supabase SSR guidance).
@@ -37,8 +39,9 @@
 ## Supabase project checklist
 
 1. Create a project and copy **URL** + **publishable/anon** key into `.env.local`. For self-service **account deletion** in Settings, also set **`SUPABASE_SERVICE_ROLE_KEY`** on the server (Dashboard → Settings → API → service_role); keep it out of client bundles and git.
-2. Run the SQL in `supabase/migrations/` in order (initial schema, then `20260330120000_user_preferences_welcome.sql` for the welcome step), via SQL Editor or `supabase db push`.
+2. Run the SQL in `supabase/migrations/` in order (initial schema, welcome step, then `20261025194000_reminder_lead_and_rls.sql`), via SQL Editor or `supabase db push`. The live Slice project already has this third migration applied.
 3. **Authentication → URL configuration**: add redirect URLs `http://localhost:3000/auth/callback` and your production `/auth/callback`. Enable social providers in the dashboard as needed (e.g. Google, GitHub); see `docs/google-oauth.md` and `docs/github-oauth.md`.
 4. If the trigger fails to create with `execute function`, use `execute procedure public.handle_new_user();` for older Postgres builds.
+5. **MCP:** `.cursor/mcp.json` pins the hosted Supabase MCP to this project's ref (`ldlbwwqasjwbymlfdlwn`). The account-wide plugin can see other orgs (for example `portfolio`) and must not be used for Slice schema changes. After the file is present, enable the server under Cursor Settings → Tools & MCP and sign in with the account that owns this project.
 
 **Note:** Next.js 16 may log that the `middleware` file convention is deprecated in favor of `proxy`. Session refresh still works; migrate when you adopt the new convention.

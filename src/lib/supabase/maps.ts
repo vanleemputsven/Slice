@@ -128,6 +128,7 @@ export type PreferencesRow = {
   updated_at: string;
   preferred_name?: string | null;
   welcome_completed_at?: string | null;
+  reminder_lead_days?: number | string | null;
 };
 
 export function rowToPreferences(row: PreferencesRow): Preferences {
@@ -144,12 +145,21 @@ export function rowToPreferences(row: PreferencesRow): Preferences {
       ? null
       : String(rawName).trim().slice(0, 80);
 
+  const leadRaw = row.reminder_lead_days;
+  const reminderLeadDays =
+    leadRaw == null || leadRaw === ""
+      ? undefined
+      : typeof leadRaw === "string"
+        ? Number(leadRaw)
+        : leadRaw;
+
   return preferencesSchema.parse({
     hourlyWage: hourly,
     hoursPerWorkday: row.hours_per_workday,
     currency: row.currency,
     locale: row.locale,
     preferredName,
+    reminderLeadDays,
   });
 }
 
@@ -161,6 +171,7 @@ export function preferencesToUpsert(
     user_id: userId,
     hourly_wage: p.hourlyWage,
     hours_per_workday: p.hoursPerWorkday,
+    reminder_lead_days: p.reminderLeadDays,
     currency: p.currency,
     locale: p.locale,
     updated_at: new Date().toISOString(),

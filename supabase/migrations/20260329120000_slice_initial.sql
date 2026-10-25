@@ -47,37 +47,37 @@ alter table public.subscriptions enable row level security;
 
 create policy "user_preferences_select_own"
   on public.user_preferences for select
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 create policy "user_preferences_insert_own"
   on public.user_preferences for insert
-  with check (auth.uid() = user_id);
+  with check ((select auth.uid()) = user_id);
 
 create policy "user_preferences_update_own"
   on public.user_preferences for update
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 create policy "user_preferences_delete_own"
   on public.user_preferences for delete
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 create policy "subscriptions_select_own"
   on public.subscriptions for select
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 create policy "subscriptions_insert_own"
   on public.subscriptions for insert
-  with check (auth.uid() = user_id);
+  with check ((select auth.uid()) = user_id);
 
 create policy "subscriptions_update_own"
   on public.subscriptions for update
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 create policy "subscriptions_delete_own"
   on public.subscriptions for delete
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -97,3 +97,5 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+revoke execute on function public.handle_new_user() from public, anon, authenticated;

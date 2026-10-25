@@ -1,10 +1,22 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useCallback, useMemo, useState } from "react";
-import type { SliceMessageKey } from "@/lib/i18n/messages";
+import { useSubscriptions } from "@/components/providers/subscriptions-provider";
 import { HEADER_CONTROL_SHELL } from "@/components/layout/header-controls";
+import { subscriptionCategoryLabel } from "@/lib/i18n/category-labels";
+import type { AppLocale } from "@/lib/i18n/locale";
+import type { SliceMessageKey } from "@/lib/i18n/messages";
+import {
+  SUBSCRIPTION_CATEGORIES,
+  type SubscriptionCategory,
+} from "@/lib/subscriptions/categories";
+import { formatCalendarDate } from "@/lib/subscriptions/calculations";
+import {
+  parseFirstListDraft,
+  storeFirstListDraft,
+} from "@/lib/subscriptions/first-list";
 
 const WIZARD_QUESTIONS = 3;
 
@@ -31,18 +43,56 @@ const BAND_OPTIONS = [
   { id: "b4", labelKey: "landing.wizardBand4" as const },
 ] as const;
 
+const WIZARD_CATEGORY: Record<string, SubscriptionCategory> = {
+  stream: "Entertainment",
+  software: "Productivity",
+  mobile: "Utilities",
+  fitness: "Health",
+  news: "Education",
+  other: "Other",
+};
+
+type NameRow = {
+  key: string;
+  name: string;
+  category: SubscriptionCategory;
+  billingCycle: "monthly" | "yearly";
+  totalPrice: string;
+  nextPaymentDate: string;
+};
+
+function emptyNameRow(key: string, category: SubscriptionCategory): NameRow {
+  return {
+    key,
+    name: "",
+    category,
+    billingCycle: "monthly",
+    totalPrice: "",
+    nextPaymentDate: formatCalendarDate(new Date()),
+  };
+}
+
 export type LandingScanWizardProps = {
   isSignedIn: boolean;
+  locale: AppLocale;
   t: (key: SliceMessageKey, vars?: Record<string, string | number>) => string;
 };
 
-export function LandingScanWizard({ isSignedIn, t }: LandingScanWizardProps) {
+export function LandingScanWizard({
+  isSignedIn,
+  locale,
+  t,
+}: LandingScanWizardProps) {
   const reduceMotion = useReducedMotion();
+  const router = useRouter();
+  const { addSubscription, preferences, ready } = useSubscriptions();
 
   const [wizardStep, setWizardStep] = useState(0);
   const [countId, setCountId] = useState<string | null>(null);
   const [categorySet, setCategorySet] = useState<Set<string>>(() => new Set());
   const [bandId, setBandId] = useState<string | null>(null);
+  const [nameRows, setNameRows] = useState<NameRow[]>([]);
+  const [saving, setSaving] = useState(false);
   const [wizardError, setWizardError] = useState<string | null>(null);
 
   const toggleCategory = useCallback((id: string) => {
@@ -60,6 +110,8 @@ export function LandingScanWizard({ isSignedIn, t }: LandingScanWizardProps) {
     setCountId(null);
     setCategorySet(new Set());
     setBandId(null);
+    setNameRows([]);
+    setSaving(false);
     setWizardError(null);
   }, []);
 
@@ -86,9 +138,21 @@ export function LandingScanWizard({ isSignedIn, t }: LandingScanWizardProps) {
         setWizardError(t("landing.wizardPickOne"));
         return;
       }
+      setNameRows((prev) => {
+        const seeded = CATEGORY_OPTIONS.filter((option) =>
+          categorySet.has(option.id)
+        ).map((option) => {
+          const category = WIZARD_CATEGORY[option.id] ?? "Other";
+          const existing = prev.find((row) => row.key === option.id);
+          return existing
+            ? { ...existing, category }
+            : emptyNameRow(option.id, category);
+        });
+        return seeded.length > 0 ? seeded : [emptyNameRow("extra", "Other")];
+      });
       setWizardStep(3);
     }
-  }, [bandId, categorySet.size, countId, t, wizardStep]);
+  }, [bandId, categorySet, countId, t, wizardStep]);
 
   const goBack = useCallback(() => {
     setWizardError(null);
@@ -96,19 +160,85 @@ export function LandingScanWizard({ isSignedIn, t }: LandingScanWizardProps) {
     setWizardStep((s) => s - 1);
   }, [wizardStep]);
 
-  const summaryLines = useMemo(() => {
-    const countLabel =
-      COUNT_OPTIONS.find((o) => o.id === countId)?.labelKey ?? null;
-    const bandLabel = BAND_OPTIONS.find((o) => o.id === bandId)?.labelKey ?? null;
-    const cats = CATEGORY_OPTIONS.filter((o) => categorySet.has(o.id)).map(
-      (o) => t(o.labelKey)
-    );
-    return {
-      countLabel: countLabel ? t(countLabel) : "",
-      categoriesText: cats.join(", "),
-      bandLabel: bandLabel ? t(bandLabel) : "",
-    };
-  }, [bandId, categorySet, countId, t]);
+  const saveNames = useCallback(() => {
+    setWizardError(null);
+    const completed: {
+      name: string;
+      category: SubscriptionCategory;
+      billingCycle: "monthly" | "yearly";
+      totalPrice: number;
+      nextPaymentDate: string;
+    }[] = [];
+    for (const row of nameRows) {
+      const name = row.name.trim();
+      const priceText = row.totalPrice.trim();
+      if (name === "" && priceText === "") continue;
+      const parsed = parseFirstListDraft({
+        rows: [
+          {
+            name,
+            category: row.category,
+            billingCycle: row.billingCycle,
+            totalPrice: Number(priceText),
+            nextPaymentDate: row.nextPaymentDate,
+          },
+        ],
+      });
+      if (!parsed) {
+        setWizardError(t("landing.wizardRowError"));
+        return;
+      }
+      completed.push(parsed[0]);
+    }
+    const draft = parseFirstListDraft({ rows: completed });
+    if (!draft) {
+      setWizardError(t("landing.wizardNone"));
+      return;
+    }
+    setSaving(true);
+    if (isSignedIn) {
+      if (!ready) {
+        setSaving(false);
+        return;
+      }
+      const currency = (preferences.currency ?? "EUR").slice(0, 3).toUpperCase();
+      for (const row of draft) {
+        addSubscription({
+          name: row.name,
+          provider: row.name,
+          iconKey: "",
+          category: row.category,
+          billingCycle: row.billingCycle,
+          customPeriodMonths: undefined,
+          totalPrice: row.totalPrice,
+          currency,
+          shared: false,
+          shareCount: undefined,
+          nextPaymentDate: row.nextPaymentDate,
+          notes: "",
+          active: true,
+          reviewFlag: false,
+        });
+      }
+      router.push("/dashboard");
+      return;
+    }
+    storeFirstListDraft(draft);
+    router.push("/login?next=/dashboard");
+  }, [
+    addSubscription,
+    isSignedIn,
+    nameRows,
+    preferences.currency,
+    ready,
+    router,
+    t,
+  ]);
+
+  const bandLabel = useMemo(() => {
+    const key = BAND_OPTIONS.find((option) => option.id === bandId)?.labelKey;
+    return key ? t(key) : "";
+  }, [bandId, t]);
 
   const wizardProgressPct =
     wizardStep >= WIZARD_QUESTIONS
@@ -342,46 +472,158 @@ export function LandingScanWizard({ isSignedIn, t }: LandingScanWizardProps) {
                 transition={stepTransition}
                 className="space-y-5"
               >
-                <div className="rounded-xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/[0.06]">
-                  <p className="slice-label">{t("landing.wizardSummaryIntro")}</p>
-                  <ul className="mt-2 space-y-1.5 text-sm text-fg-secondary">
-                    <li className="text-fg">
-                      {t("landing.wizardSummaryLine1", {
-                        range: summaryLines.countLabel,
-                      })}
-                    </li>
-                    <li>{summaryLines.categoriesText}</li>
-                    <li className="text-fg">
-                      {t("landing.wizardSummaryLine3", {
-                        band: summaryLines.bandLabel,
-                      })}
-                    </li>
-                  </ul>
-                </div>
                 <div>
                   <h2 className="font-sans text-base font-bold text-fg">
-                    {isSignedIn
-                      ? t("landing.wizardDoneSignedInTitle")
-                      : t("landing.wizardDoneTitle")}
+                    {t("landing.wizardNamesTitle")}
                   </h2>
                   <p className="mt-2 text-sm leading-relaxed text-fg-secondary">
-                    {isSignedIn
-                      ? t("landing.wizardDoneSignedInBody")
-                      : t("landing.wizardDoneBody")}
+                    {t("landing.wizardNamesHint")}
+                  </p>
+                  <p className="mt-2 text-sm text-muted">
+                    {t("landing.wizardSummaryLine3", {
+                      band: bandLabel,
+                    })}
                   </p>
                 </div>
-                {isSignedIn ? (
-                  <Link href="/dashboard" className="slice-btn-primary w-full justify-center sm:w-auto">
-                    {t("landing.ctaDashboard")}
-                  </Link>
-                ) : (
-                  <Link
-                    href="/login?next=/dashboard"
-                    className="slice-btn-primary w-full justify-center sm:w-auto"
+                <ul className="space-y-4">
+                  {nameRows.map((row) => (
+                    <li
+                      key={row.key}
+                      className="grid gap-2 rounded-xl bg-white/[0.03] p-3 ring-1 ring-white/[0.06] sm:grid-cols-2"
+                    >
+                      <label className="block sm:col-span-2">
+                        <span className="slice-label">{t("form.name")}</span>
+                        <input
+                          className="slice-input"
+                          value={row.name}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setNameRows((prev) =>
+                              prev.map((item) =>
+                                item.key === row.key ? { ...item, name: value } : item
+                              )
+                            );
+                          }}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="slice-label">{t("form.totalPrice")}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          className="slice-input tabular-nums"
+                          value={row.totalPrice}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setNameRows((prev) =>
+                              prev.map((item) =>
+                                item.key === row.key
+                                  ? { ...item, totalPrice: value }
+                                  : item
+                              )
+                            );
+                          }}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="slice-label">{t("form.billingCycle")}</span>
+                        <select
+                          className="slice-input"
+                          value={row.billingCycle}
+                          onChange={(event) => {
+                            const value = event.target.value === "yearly" ? "yearly" : "monthly";
+                            setNameRows((prev) =>
+                              prev.map((item) =>
+                                item.key === row.key
+                                  ? { ...item, billingCycle: value }
+                                  : item
+                              )
+                            );
+                          }}
+                        >
+                          <option value="monthly">{t("form.billingMonthly")}</option>
+                          <option value="yearly">{t("form.billingYearly")}</option>
+                        </select>
+                      </label>
+                      <label className="block">
+                        <span className="slice-label">{t("form.nextPayment")}</span>
+                        <input
+                          type="date"
+                          className="slice-input"
+                          value={row.nextPaymentDate}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setNameRows((prev) =>
+                              prev.map((item) =>
+                                item.key === row.key
+                                  ? { ...item, nextPaymentDate: value }
+                                  : item
+                              )
+                            );
+                          }}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="slice-label">{t("form.category")}</span>
+                        <select
+                          className="slice-input"
+                          value={row.category}
+                          onChange={(event) => {
+                            const value = event.target.value as SubscriptionCategory;
+                            setNameRows((prev) =>
+                              prev.map((item) =>
+                                item.key === row.key
+                                  ? { ...item, category: value }
+                                  : item
+                              )
+                            );
+                          }}
+                        >
+                          {SUBSCRIPTION_CATEGORIES.map((category) => (
+                            <option key={category} value={category}>
+                              {subscriptionCategoryLabel(category, locale)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                {nameRows.length < 8 ? (
+                  <button
+                    type="button"
+                    className="text-sm font-semibold text-fg-secondary underline-offset-2 hover:text-fg hover:underline"
+                    onClick={() =>
+                      setNameRows((prev) => [
+                        ...prev,
+                        emptyNameRow(crypto.randomUUID(), "Other"),
+                      ])
+                    }
                   >
-                    {t("landing.wizardDoneCta")}
-                  </Link>
-                )}
+                    {t("landing.wizardAddRow")}
+                  </button>
+                ) : null}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-5">
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    disabled={saving}
+                    className="slice-btn-secondary !px-4"
+                  >
+                    {t("landing.wizardBack")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveNames}
+                    disabled={saving || (isSignedIn && !ready)}
+                    className="slice-btn-primary !px-5"
+                  >
+                    {isSignedIn
+                      ? t("landing.wizardSave")
+                      : t("landing.wizardSaveGuest")}
+                  </button>
+                </div>
               </motion.div>
             ) : null}
           </AnimatePresence>

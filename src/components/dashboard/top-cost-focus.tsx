@@ -50,20 +50,16 @@ export function TopCostFocus({
       aria-labelledby="top-cost-heading"
     >
       <div className="border-b border-white/[0.07] pb-4">
-        <p
+        <h2
           id="top-cost-heading"
-          className="text-xs font-medium uppercase tracking-wide text-muted"
+          className="text-xl font-semibold leading-tight text-fg"
         >
-          {t("topCost.kicker")}
-        </p>
-        <h2 className="mt-2 text-xl font-semibold leading-tight text-fg sm:text-2xl">
           {s.name}
         </h2>
         <p className="mt-1 text-sm text-fg-secondary">
-          {s.provider}
-          <span className="text-muted"> · </span>
-          {subscriptionCategoryLabel(s.category, locale)}
+          {`${s.provider}, ${subscriptionCategoryLabel(s.category, locale)}`}
         </p>
+        <p className="mt-1 text-sm text-muted">{t("topCost.kicker")}</p>
       </div>
 
       <div className="mt-4 space-y-4 text-sm">

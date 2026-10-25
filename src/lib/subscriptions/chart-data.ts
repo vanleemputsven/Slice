@@ -5,20 +5,21 @@ import { getMonthlyMyShare, getMonthlyTotalPrice } from "./calculations";
  * Coral → orange ramp only (one family on dark UI).
  * Use index modulo length for segments; contrast comes from lightness spread.
  */
+/** One hue on the data. Later slices step down so categories stay distinct. */
 export const CHART_SEGMENT_COLORS = [
-  "#FF584D",
-  "#FF7D76",
-  "#E04F3D",
-  "#FB923C",
-  "#F97316",
-  "#EA580C",
-  "#FDA174",
-  "#C2410C",
+  "rgb(255 88 77 / 1)",
+  "rgb(255 88 77 / 0.78)",
+  "rgb(255 88 77 / 0.6)",
+  "rgb(255 88 77 / 0.46)",
+  "rgb(255 88 77 / 0.34)",
+  "rgb(255 88 77 / 0.24)",
+  "rgb(255 88 77 / 0.16)",
+  "rgb(255 88 77 / 0.1)",
 ] as const;
 
-/** Bar / grid lines that stay on-theme without rainbow charts. */
-export const CHART_AXIS_MUTED = "rgb(255 88 77 / 0.22)";
-export const CHART_GRID_STROKE = "rgb(255 88 77 / 0.09)";
+/** Grid and axis stay neutral. Colour belongs on the marks. */
+export const CHART_AXIS_MUTED = "rgb(181 188 204 / 0.85)";
+export const CHART_GRID_STROKE = "rgb(255 255 255 / 0.06)";
 
 export type CategorySlice = {
   category: string;

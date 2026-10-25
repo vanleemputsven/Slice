@@ -24,13 +24,13 @@ export function AppHeader() {
     return (
       <Link
         href={href}
-        className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-[background,color] ${
+        className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-[background,color] ${
           active
-            ? "bg-white/12 text-fg shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]"
-            : "text-fg-secondary hover:bg-white/[0.06] hover:text-fg"
+            ? "bg-white/10 font-semibold text-fg"
+            : "font-medium text-fg-secondary hover:bg-white/[0.06] hover:text-fg"
         }`}
       >
-        <span className={active ? "text-accent-bright" : "text-muted"}>{icon}</span>
+        <span className="text-current">{icon}</span>
         {label}
       </Link>
     );

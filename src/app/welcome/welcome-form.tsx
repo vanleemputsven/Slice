@@ -23,6 +23,7 @@ import {
   type WelcomeProfileFormFieldValues,
 } from "@/lib/validation/welcome-profile";
 
+import { useSubscriptions } from "@/components/providers/subscriptions-provider";
 import { completeWelcomeProfile, skipWelcomeProfile } from "./actions";
 
 const LOGIN_LOCALE_KEY = "slice-login-locale";
@@ -119,6 +120,7 @@ export function WelcomeForm({
   initialPreferredName,
 }: WelcomeFormProps) {
   const router = useRouter();
+  const { reloadSlice } = useSubscriptions();
   const reduceMotion = useReducedMotion();
   const [locale, setLocale] = useState<AppLocale>(initialLocale);
   const [mounted, setMounted] = useState(false);
@@ -191,6 +193,7 @@ export function WelcomeForm({
         setSubmitting(null);
         return;
       }
+      await reloadSlice();
       router.refresh();
       router.push(nextPath);
     } catch {
@@ -209,6 +212,7 @@ export function WelcomeForm({
         setSubmitting(null);
         return;
       }
+      await reloadSlice();
       router.refresh();
       router.push(nextPath);
     } catch {

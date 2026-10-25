@@ -1,26 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
-import {
-  AlarmClock,
-  ArrowRight,
-  CalendarDays,
-  Layers,
-  PieChart,
-  Share2,
-  Timer,
-  Wallet,
-} from "lucide-react";
+import { useMemo, useState } from "react";
 import { useSubscriptions } from "@/components/providers/subscriptions-provider";
 import {
   burnRateHours,
   burnRateWorkdays,
-  daysUntil,
   getMonthlyMyShare,
-  getNextPaymentOnOrAfter,
+  listRenewalHorizon,
+  nextCycleDate,
   summarizeSubscriptions,
 } from "@/lib/subscriptions/calculations";
+import type {
+  SubscriptionFormInput,
+  SubscriptionRecord,
+} from "@/lib/validation/subscription";
 import { buildInsights } from "@/lib/subscriptions/insights";
 import { formatCurrency } from "@/lib/utils/currency";
 import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
@@ -28,8 +22,67 @@ import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
 import { DashboardInsights } from "@/components/dashboard/dashboard-insights";
 import { MonthlyShareExplorer } from "@/components/dashboard/monthly-share-explorer";
 import { TopCostFocus } from "@/components/dashboard/top-cost-focus";
+import { GuidedAddDialog } from "@/components/subscriptions/guided-add-dialog";
+import { SubscriptionFormDialog } from "@/components/subscriptions/subscription-form-dialog";
+import { ProviderAvatar } from "@/components/subscriptions/provider-avatar";
+
+function subscriptionToForm(
+  sub: SubscriptionRecord,
+  nextPaymentDate: string
+): SubscriptionFormInput {
+  return {
+    name: sub.name,
+    provider: sub.provider,
+    iconKey: sub.iconKey ?? "",
+    category: sub.category,
+    billingCycle: sub.billingCycle,
+    customPeriodMonths: sub.customPeriodMonths,
+    totalPrice: sub.totalPrice,
+    currency: sub.currency,
+    shared: sub.shared,
+    shareCount: sub.shareCount,
+    nextPaymentDate,
+    notes: sub.notes ?? "",
+    active: sub.active,
+    reviewFlag: sub.reviewFlag ?? false,
+  };
+}
 import { sliceDateLocale } from "@/lib/i18n/locale";
+import type { SliceMessageKey } from "@/lib/i18n/messages";
 import { useSliceT } from "@/lib/i18n/use-slice-t";
+
+const REMINDER_LEAD_CHOICES = [0, 1, 3, 7, 14] as const;
+
+function reminderLeadChoices(current: number): number[] {
+  if (
+    REMINDER_LEAD_CHOICES.includes(
+      current as (typeof REMINDER_LEAD_CHOICES)[number]
+    )
+  ) {
+    return [...REMINDER_LEAD_CHOICES];
+  }
+  return [...REMINDER_LEAD_CHOICES, current].sort((a, b) => a - b);
+}
+
+function reminderLeadLabel(
+  t: (key: SliceMessageKey, vars?: Record<string, string | number>) => string,
+  days: number
+): string {
+  switch (days) {
+    case 0:
+      return t("dashboard.horizonLead0");
+    case 1:
+      return t("dashboard.horizonLead1");
+    case 3:
+      return t("dashboard.horizonLead3");
+    case 7:
+      return t("dashboard.horizonLead7");
+    case 14:
+      return t("dashboard.horizonLead14");
+    default:
+      return t("dashboard.horizonLeadDays", { days });
+  }
+}
 
 export function DashboardClient() {
   const {
@@ -38,7 +91,13 @@ export function DashboardClient() {
     preferences,
     setHourlyWage,
     setHoursPerWorkday,
+    setReminderLeadDays,
+    addSubscription,
+    updateSubscription,
   } = useSubscriptions();
+  const [addOpen, setAddOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [editing, setEditing] = useState<SubscriptionRecord | null>(null);
   const { t, locale } = useSliceT();
   const dateLoc = sliceDateLocale(locale);
 
@@ -72,33 +131,28 @@ export function DashboardClient() {
     [hoursPerMo, preferences.hoursPerWorkday]
   );
 
-  const upcoming = useMemo(() => {
-    const now = new Date();
-    const active = subscriptions.filter((s) => s.active);
-    return [...active]
-      .map((s) => ({
-        sub: s,
-        next: getNextPaymentOnOrAfter(s, now),
-      }))
-      .sort((a, b) => a.next.getTime() - b.next.getTime())
-      .slice(0, 6);
-  }, [subscriptions]);
-
-  const thisWeek = useMemo(() => {
-    const now = new Date();
-    return upcoming.filter(({ next }) => {
-      const d = daysUntil(next, now);
-      return d >= 0 && d <= 7;
-    });
-  }, [upcoming]);
-
-  const thisMonth = useMemo(() => {
-    const now = new Date();
-    return upcoming.filter(({ next }) => {
-      const d = daysUntil(next, now);
-      return d >= 0 && d <= 30;
-    });
-  }, [upcoming]);
+  const today = useMemo(() => new Date(), []);
+  const horizon = useMemo(
+    () =>
+      listRenewalHorizon(
+        subscriptions,
+        today,
+        preferences.reminderLeadDays
+      ),
+    [subscriptions, today, preferences.reminderLeadDays]
+  );
+  const horizonTotal = useMemo(
+    () => horizon.reduce((sum, charge) => sum + charge.personalShare, 0),
+    [horizon]
+  );
+  const horizonHours = useMemo(() => {
+    if (hourly == null || hourly <= 0 || horizonTotal <= 0) return null;
+    return burnRateHours(horizonTotal, hourly);
+  }, [hourly, horizonTotal]);
+  const subscriptionById = useMemo(
+    () => new Map(subscriptions.map((sub) => [sub.id, sub])),
+    [subscriptions]
+  );
 
   const mostExpensive = useMemo(() => {
     const active = subscriptions.filter((s) => s.active);
@@ -109,6 +163,7 @@ export function DashboardClient() {
   }, [subscriptions]);
 
   const cur = preferences.currency ?? "USD";
+  const hasSubscriptions = subscriptions.length > 0;
 
   if (!ready) {
     return <DashboardSkeleton />;
@@ -116,14 +171,9 @@ export function DashboardClient() {
 
   return (
     <div className="space-y-10">
-      <MonthlyShareExplorer
-        subscriptions={subscriptions}
-        currency={cur}
-      />
-
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold leading-tight tracking-tight text-fg sm:text-4xl">
+          <h1 className="text-2xl font-semibold leading-tight tracking-tight text-fg">
             {t("dashboard.title")}
           </h1>
           <p className="mt-2 max-w-md text-sm text-muted">
@@ -135,21 +185,178 @@ export function DashboardClient() {
           className="slice-btn-secondary shrink-0 self-start sm:self-auto"
         >
           {t("dashboard.manageSubs")}
-          <ArrowRight className="size-4" aria-hidden />
         </Link>
       </div>
 
+      <section aria-labelledby="horizon-panel">
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-white/[0.08] pb-4">
+          <div className="min-w-0">
+            <h2
+              id="horizon-panel"
+              className="text-base font-semibold text-fg"
+            >
+              {t("dashboard.horizonTitle")}
+            </h2>
+            {horizon.length === 0 ? (
+              <p className="mt-2 max-w-[46ch] text-sm text-fg-secondary">
+                {hasSubscriptions
+                  ? t("dashboard.horizonEmpty")
+                  : t("dashboard.horizonEmptyStart")}
+              </p>
+            ) : (
+              <>
+                <p className="mt-3 font-mono text-3xl font-semibold tabular-nums tracking-tight text-fg">
+                  {formatCurrency(horizonTotal, cur, dateLoc)}
+                </p>
+                <p className="mt-1 max-w-[46ch] text-sm text-fg-secondary">
+                  {horizonHours != null
+                    ? t("dashboard.horizonWork", {
+                        hours: horizonHours.toFixed(1),
+                      })
+                    : t("dashboard.horizonSum", {
+                        amount: formatCurrency(horizonTotal, cur, dateLoc),
+                      })}
+                </p>
+              </>
+            )}
+          </div>
+          <label className="block w-full sm:w-52">
+            <span className="slice-label" id="horizon-lead-label">
+              {t("dashboard.horizonLeadLabel")}
+            </span>
+            <select
+              className="slice-input mt-1 w-full cursor-pointer"
+              aria-labelledby="horizon-lead-label"
+              value={preferences.reminderLeadDays}
+              onChange={(event) => {
+                setReminderLeadDays(Number(event.target.value));
+              }}
+            >
+              {reminderLeadChoices(preferences.reminderLeadDays).map((days) => (
+                <option key={days} value={days}>
+                  {reminderLeadLabel(t, days)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <button
+          type="button"
+          className="slice-btn-primary mt-4"
+          onClick={() => {
+            setEditing(null);
+            setAddOpen(false);
+            setGuideOpen(true);
+          }}
+        >
+          {t("dashboard.horizonAdd")}
+        </button>
+        {horizon.length > 0 ? (
+          <ul className="mt-5 divide-y divide-white/[0.07]" aria-labelledby="horizon-panel">
+            {horizon.map((charge) => {
+              const sub = subscriptionById.get(charge.subscriptionId);
+              if (!sub) return null;
+              const when =
+                charge.daysUntil === 0
+                  ? t("dashboard.dueToday")
+                  : charge.daysUntil === 1
+                    ? t("dashboard.dueTomorrow")
+                    : t("dashboard.dueInDays", { days: charge.daysUntil });
+              const [year, month, day] = charge.dueOn.split("-").map(Number);
+              const due = new Date(year, (month ?? 1) - 1, day ?? 1);
+              const chargeHours =
+                hourly != null && hourly > 0
+                  ? burnRateHours(charge.personalShare, hourly)
+                  : null;
+              return (
+                <li
+                  key={charge.subscriptionId}
+                  className="flex items-start justify-between gap-3 py-3 first:pt-0"
+                >
+                  <button
+                    type="button"
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left hover:bg-white/[0.03]"
+                    aria-label={t("dashboard.horizonEdit", { name: sub.name })}
+                    onClick={() => {
+                      setAddOpen(false);
+                      setEditing(sub);
+                    }}
+                  >
+                    <ProviderAvatar
+                      name={sub.name}
+                      provider={sub.provider}
+                      iconKey={sub.iconKey}
+                      size="sm"
+                    />
+                    <span className="min-w-0">
+                    <p className="truncate text-sm font-medium text-fg">{sub.name}</p>
+                    <p
+                      className={`text-xs ${
+                        charge.insideReminderLead ? "text-accent" : "text-fg-secondary"
+                      }`}
+                    >
+                      {when}{" "}
+                      {due.toLocaleDateString(dateLoc, {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                      {charge.insideReminderLead
+                        ? ` ${t("dashboard.horizonMarked")}`
+                        : ""}
+                    </p>
+                    {sub.shared ? (
+                      <p className="text-xs text-fg-secondary">
+                        {t("dashboard.horizonYourShare")}
+                      </p>
+                    ) : null}
+                    </span>
+                  </button>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <p className="font-mono text-sm font-semibold tabular-nums text-fg">
+                      {formatCurrency(charge.personalShare, cur, dateLoc)}
+                    </p>
+                    {chargeHours != null ? (
+                      <p className="font-mono text-xs tabular-nums text-fg-secondary">
+                        {t("dashboard.horizonHours", {
+                          hours: chargeHours.toFixed(1),
+                        })}
+                      </p>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-fg-secondary underline-offset-2 hover:text-fg hover:underline"
+                      aria-label={t("dashboard.horizonRecordAria", { name: sub.name })}
+                      onClick={() => {
+                        const next = nextCycleDate(sub, charge.dueOn);
+                        if (!next) return;
+                        updateSubscription(sub.id, subscriptionToForm(sub, next));
+                      }}
+                    >
+                      {t("dashboard.horizonRecord")}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+      </section>
+
+      {hasSubscriptions ? (
+        <MonthlyShareExplorer subscriptions={subscriptions} currency={cur} />
+      ) : null}
+
+      {hasSubscriptions ? (
       <section
         aria-labelledby="dash-stats"
-        className="slice-card p-5 sm:p-6"
+        className="border-t border-white/[0.08] pt-6"
       >
         <h2 id="dash-stats" className="sr-only">
           {t("dashboard.summaryStats")}
         </h2>
         <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4 xl:gap-6">
           <article className="xl:border-r xl:border-white/[0.08] xl:pr-6">
-            <div className="flex items-center gap-2 text-muted">
-              <Wallet className="size-4 text-accent" aria-hidden />
+            <div className="text-muted">
               <span className="slice-label">{t("dashboard.statMonthYours")}</span>
             </div>
             <p className="mt-3 font-mono text-2xl font-semibold tabular-nums tracking-tight text-fg sm:text-3xl">
@@ -165,8 +372,7 @@ export function DashboardClient() {
           </article>
 
           <article className="xl:border-r xl:border-white/[0.08] xl:pr-6">
-            <div className="flex items-center gap-2 text-muted">
-              <PieChart className="size-4 text-accent" aria-hidden />
+            <div className="text-muted">
               <span className="slice-label">{t("dashboard.statYearYours")}</span>
             </div>
             <p className="mt-3 font-mono text-2xl font-semibold tabular-nums tracking-tight text-fg sm:text-3xl">
@@ -176,8 +382,7 @@ export function DashboardClient() {
           </article>
 
           <article className="xl:border-r xl:border-white/[0.08] xl:pr-6">
-            <div className="flex items-center gap-2 text-muted">
-              <Layers className="size-4 text-accent" aria-hidden />
+            <div className="text-muted">
               <span className="slice-label">{t("dashboard.statActive")}</span>
             </div>
             <p className="mt-3 font-mono text-2xl font-semibold tabular-nums tracking-tight text-fg sm:text-3xl">
@@ -189,8 +394,7 @@ export function DashboardClient() {
           </article>
 
           <article>
-            <div className="flex items-center gap-2 text-muted">
-              <Share2 className="size-4 text-accent" aria-hidden />
+            <div className="text-muted">
               <span className="slice-label">{t("dashboard.statSharedPlans")}</span>
             </div>
             <p className="mt-3 font-mono text-2xl font-semibold tabular-nums tracking-tight text-fg sm:text-3xl">
@@ -200,8 +404,9 @@ export function DashboardClient() {
           </article>
         </div>
       </section>
+      ) : null}
 
-      {(mostExpensive || insights.length > 0) && (
+      {hasSubscriptions && (mostExpensive || insights.length > 0) ? (
         <section className="slice-card overflow-hidden">
           <div className="grid lg:grid-cols-12 lg:divide-x lg:divide-white/[0.07]">
             {mostExpensive ? (
@@ -228,18 +433,18 @@ export function DashboardClient() {
             ) : null}
           </div>
         </section>
-      )}
+      ) : null}
 
-      <DashboardCharts subscriptions={subscriptions} currency={cur} />
+      {hasSubscriptions ? (
+        <DashboardCharts subscriptions={subscriptions} currency={cur} />
+      ) : null}
 
-      <section className="slice-card overflow-hidden" aria-labelledby="burn-panel">
-        <div className="grid lg:grid-cols-5 lg:divide-x lg:divide-white/[0.07]">
-          <div className="p-5 sm:p-6 lg:col-span-3">
+      <section className="border-t border-white/[0.08] pt-6" aria-labelledby="burn-panel">
+        <div>
             <h2
               id="burn-panel"
-              className="flex items-center gap-2 text-base font-semibold text-fg sm:text-lg"
+              className="text-base font-semibold text-fg"
             >
-              <Timer className="size-5 shrink-0 text-accent" aria-hidden />
               {t("dashboard.workTime")}
             </h2>
             <p className="mt-1 text-sm text-muted">
@@ -309,8 +514,7 @@ export function DashboardClient() {
                 </dd>
               </div>
               <div className="flex flex-wrap items-start justify-between gap-2 border-t border-white/[0.07] pt-4">
-                <dt className="flex items-center gap-2 slice-label">
-                  <AlarmClock className="size-3.5 text-accent" aria-hidden />
+                <dt className="slice-label">
                   {t("dashboard.hoursPerYear")}
                 </dt>
                 <dd className="text-right text-sm text-fg">
@@ -323,73 +527,31 @@ export function DashboardClient() {
               </div>
             </dl>
           )}
-          </div>
-
-          <div className="p-5 sm:p-6 lg:col-span-2">
-            <h2 className="flex items-center gap-2 text-base font-semibold text-fg sm:text-lg">
-              <CalendarDays className="size-5 shrink-0 text-accent" aria-hidden />
-              {t("dashboard.upcoming")}
-            </h2>
-            <p className="mt-1 text-xs text-muted">
-              {t("dashboard.upcomingCounts", {
-                week: thisWeek.length,
-                month: thisMonth.length,
-              })}
-            </p>
-            <ul className="mt-4 space-y-0 divide-y divide-white/[0.07]">
-              {upcoming.length === 0 ? (
-                <li className="py-3 text-sm text-muted">{t("dashboard.noneActive")}</li>
-              ) : (
-                upcoming.map(({ sub, next }) => {
-                  const d = daysUntil(next, new Date());
-                  const label =
-                    d === 0
-                      ? t("dashboard.dueToday")
-                      : d === 1
-                        ? t("dashboard.dueTomorrow")
-                        : t("dashboard.dueInDays", { days: d });
-                  return (
-                    <li
-                      key={sub.id}
-                      className="flex items-center justify-between gap-3 py-3 first:pt-0"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-fg">
-                          {sub.name}
-                        </p>
-                        <p className="text-xs text-muted">
-                          {label} ·{" "}
-                          {next.toLocaleDateString(dateLoc, {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </p>
-                      </div>
-                      <p className="shrink-0 text-sm tabular-nums text-accent-bright">
-                        {formatCurrency(getMonthlyMyShare(sub), cur, dateLoc)}
-                      </p>
-                    </li>
-                  );
-                })
-              )}
-            </ul>
-          </div>
         </div>
       </section>
 
-      {subscriptions.length === 0 && (
-        <div className="slice-card border-dashed border-border-subtle p-8 text-center">
-          <p className="text-base font-semibold text-fg">
-            {t("dashboard.emptyTitle")}
-          </p>
-          <p className="mt-2 text-sm text-muted">
-            {t("dashboard.emptyHint")}
-          </p>
-          <Link href="/subscriptions" className="slice-btn-primary mt-5 inline-flex">
-            {t("dashboard.emptyCta")}
-          </Link>
-        </div>
-      )}
+      <GuidedAddDialog
+        open={guideOpen}
+        onClose={() => setGuideOpen(false)}
+        onSubmit={(values) => addSubscription(values)}
+        onFullForm={() => {
+          setGuideOpen(false);
+          setEditing(null);
+          setAddOpen(true);
+        }}
+      />
+      <SubscriptionFormDialog
+        open={addOpen || editing != null}
+        initial={editing}
+        onClose={() => {
+          setAddOpen(false);
+          setEditing(null);
+        }}
+        onSubmit={(values) => {
+          if (editing) updateSubscription(editing.id, values);
+          else addSubscription(values);
+        }}
+      />
     </div>
   );
 }

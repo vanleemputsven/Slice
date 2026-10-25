@@ -69,7 +69,7 @@ function ChartTooltip({
     ? formatter(v, p)
     : formatCurrency(v, currency, numberLocale);
   return (
-    <div className="rounded-md bg-[rgb(20_22_28/0.96)] px-2.5 py-2 text-xs shadow-lg ring-1 ring-accent/25">
+    <div className="rounded-md border border-white/10 bg-[rgb(20_22_28)] px-2.5 py-2 text-xs">
       <p className="font-medium text-fg">{title}</p>
       <p className="mt-0.5 font-mono tabular-nums text-accent-bright">{text}</p>
       {typeof p.fullMonthly === "number" && p.shared === true ? (

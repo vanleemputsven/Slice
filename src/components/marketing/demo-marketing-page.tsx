@@ -79,7 +79,7 @@ export function DemoMarketingPage({ isSignedIn }: DemoMarketingPageProps) {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6 sm:pb-24 sm:pt-8 lg:px-8">
-        <LandingScanWizard isSignedIn={isSignedIn} t={t} />
+        <LandingScanWizard isSignedIn={isSignedIn} locale={locale} t={t} />
       </main>
     </div>
   );
