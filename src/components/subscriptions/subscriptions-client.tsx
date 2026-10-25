@@ -26,6 +26,7 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { subscriptionCategoryLabel } from "@/lib/i18n/category-labels";
 import { sliceDateLocale, sliceNumberLocale } from "@/lib/i18n/locale";
 import { useSliceT } from "@/lib/i18n/use-slice-t";
+import { useLocalToday } from "@/lib/ui/use-local-today";
 import { HEADER_CONTROL_SHELL } from "@/components/layout/header-controls";
 
 type SortKey = "cost" | "next" | "name" | "category";
@@ -33,15 +34,12 @@ type FilterShared = "all" | "shared" | "solo";
 
 /** Matches header nav / language toggle — one visual system */
 function segmentClass(active: boolean) {
-  return `shrink-0 snap-start rounded-full px-3.5 py-2 text-sm font-semibold transition-[background,color,box-shadow] ${
+  return `min-h-11 shrink-0 snap-start rounded-full px-3.5 py-2 text-sm font-semibold transition-[background,color,box-shadow] ${
     active
       ? "bg-white/12 text-fg shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]"
       : "text-fg-secondary hover:bg-white/[0.06] hover:text-fg"
   }`;
 }
-
-const hideScrollbar =
-  "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden";
 
 export function SubscriptionsClient() {
   const searchParams = useSearchParams();
@@ -85,6 +83,59 @@ export function SubscriptionsClient() {
   const [editing, setEditing] = useState<SubscriptionRecord | null>(null);
 
   const cur = preferences.currency ?? "USD";
+  const today = useLocalToday();
+
+  const markCharged = (s: SubscriptionRecord, due: Date) => {
+    const dueOn = formatCalendarDate(due);
+    const advanced = nextCycleDate(s, dueOn);
+    if (!advanced) return;
+    updateSubscription(s.id, {
+      name: s.name,
+      provider: s.provider,
+      iconKey: s.iconKey ?? "",
+      category: s.category,
+      billingCycle: s.billingCycle,
+      customPeriodMonths: s.customPeriodMonths,
+      totalPrice: s.totalPrice,
+      currency: s.currency,
+      shared: s.shared,
+      shareCount: s.shareCount,
+      nextPaymentDate: advanced,
+      notes: s.notes ?? "",
+      active: s.active,
+      reviewFlag: s.reviewFlag ?? false,
+    });
+  };
+
+  const chargeOf = (s: SubscriptionRecord) => {
+    if (!today) {
+      const [year, month, day] = s.nextPaymentDate.split("-").map(Number);
+      const label =
+        year && month && day
+          ? new Date(year, month - 1, day).toLocaleDateString(dateLoc, {
+              month: "short",
+              day: "numeric",
+            })
+          : s.nextPaymentDate;
+      return {
+        next: null as Date | null,
+        label,
+        relative: null as string | null,
+        marked: false,
+      };
+    }
+    const next = getNextPaymentOnOrAfter(s, today);
+    const days = daysUntil(next, today);
+    return {
+      next,
+      label: next.toLocaleDateString(dateLoc, {
+        month: "short",
+        day: "numeric",
+      }),
+      relative: days < 0 ? t("subs.past") : t("subs.daysSuffix", { days }),
+      marked: s.active && days >= 0 && days <= preferences.reminderLeadDays,
+    };
+  };
 
   const filteredSorted = useMemo(() => {
     let rows = subscriptions.filter((s) => matchesRegisterQuery(s, query));
@@ -255,7 +306,7 @@ export function SubscriptionsClient() {
                   aria-labelledby="subs-filter-cat"
                 >
                   <div
-                    className={`flex flex-nowrap gap-1 overflow-x-auto px-0.5 py-0.5 ${hideScrollbar}`}
+                    className="flex flex-wrap gap-1 px-0.5 py-0.5"
                   >
                     <button
                       type="button"
@@ -288,7 +339,7 @@ export function SubscriptionsClient() {
                   <div
                     role="group"
                     aria-labelledby="subs-filter-share"
-                    className={`flex max-w-full flex-nowrap gap-1 overflow-x-auto ${hideScrollbar} ${HEADER_CONTROL_SHELL}`}
+                    className={`flex max-w-full flex-wrap gap-1 ${HEADER_CONTROL_SHELL}`}
                   >
                     <button
                       type="button"
@@ -324,7 +375,7 @@ export function SubscriptionsClient() {
                   <div
                     role="group"
                     aria-labelledby="subs-filter-sort"
-                    className={`flex max-w-full flex-nowrap gap-1 overflow-x-auto ${hideScrollbar} ${HEADER_CONTROL_SHELL}`}
+                    className={`flex max-w-full flex-wrap gap-1 ${HEADER_CONTROL_SHELL}`}
                   >
                     {(
                       [
@@ -360,7 +411,103 @@ export function SubscriptionsClient() {
             </p>
           </div>
 
-          <div className="slice-card overflow-hidden">
+          {filteredSorted.length === 0 ? (
+            <p className="py-8 text-sm text-fg-secondary md:hidden">
+              {t("subs.noMatches")}
+            </p>
+          ) : (
+            <ul className="divide-y divide-white/[0.08] md:hidden">
+              {filteredSorted.map((s) => {
+                const charge = chargeOf(s);
+                return (
+                  <li key={s.id} data-subscription-row={s.id} className="py-4">
+                    <div className="flex items-start gap-3">
+                      <ProviderAvatar
+                        name={s.name}
+                        provider={s.provider}
+                        iconKey={s.iconKey}
+                        size="sm"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-fg">
+                          {s.name}
+                          {!s.active ? (
+                            <span className="ml-2 text-xs font-normal text-muted">
+                              {t("subs.inactive")}
+                            </span>
+                          ) : null}
+                        </p>
+                        <p className="truncate text-sm text-fg-secondary">
+                          {subscriptionCategoryLabel(s.category, locale)},{" "}
+                          {billingLabel(s)}
+                        </p>
+                        <p className="mt-1 font-mono text-base font-semibold tabular-nums text-fg">
+                          {formatCurrency(getMonthlyMyShare(s), cur, numberLoc)}
+                          <span className="ml-2 text-xs font-sans font-normal text-muted">
+                            {t("subs.colYoursMo")}
+                          </span>
+                        </p>
+                        <p
+                          className={`mt-0.5 text-sm tabular-nums ${
+                            charge.marked ? "text-accent" : "text-muted"
+                          }`}
+                        >
+                          {charge.label}
+                          {charge.relative ? ` (${charge.relative})` : ""}
+                          {charge.marked
+                            ? ` ${t("dashboard.horizonMarked")}`
+                            : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {s.active && charge.next ? (
+                        <button
+                          type="button"
+                          className="slice-btn-secondary px-3 text-sm"
+                          aria-label={t("dashboard.horizonRecordAria", {
+                            name: s.name,
+                          })}
+                          onClick={() => markCharged(s, charge.next as Date)}
+                        >
+                          {t("dashboard.horizonRecord")}
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted hover:bg-surface-alt hover:text-fg"
+                        aria-label={t("subs.editAria", { name: s.name })}
+                        onClick={() => {
+                          setEditing(s);
+                          setFormOpen(true);
+                        }}
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted hover:bg-danger/10 hover:text-danger"
+                        aria-label={t("subs.deleteAria", { name: s.name })}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              t("subs.deleteConfirm", { name: s.name })
+                            )
+                          ) {
+                            deleteSubscription(s.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          <div className="slice-card hidden overflow-hidden md:block">
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
                 <thead className="border-b border-white/[0.06] bg-white/[0.02] text-xs font-semibold text-muted">
@@ -391,12 +538,7 @@ export function SubscriptionsClient() {
                     </tr>
                   ) : null}
                   {filteredSorted.map((s) => {
-                    const next = getNextPaymentOnOrAfter(s, new Date());
-                    const d = daysUntil(next, new Date());
-                    const marked =
-                      s.active &&
-                      d >= 0 &&
-                      d <= preferences.reminderLeadDays;
+                    const charge = chargeOf(s);
                     return (
                       <tr
                         key={s.id}
@@ -407,7 +549,7 @@ export function SubscriptionsClient() {
                             : ""
                         }`}
                       >
-                        <td className="px-4 py-3">
+                        <td className="sticky left-0 z-10 bg-surface px-4 py-3">
                           <div className="flex items-center gap-3">
                             <ProviderAvatar
                               name={s.name}
@@ -452,20 +594,15 @@ export function SubscriptionsClient() {
                         </td>
                         <td
                           className={`px-4 py-3 tabular-nums ${
-                            marked ? "text-accent" : "text-muted"
+                            charge.marked ? "text-accent" : "text-muted"
                           }`}
                         >
-                          {next.toLocaleDateString(dateLoc, {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                          <span className="ml-1 text-xs text-muted">
-                            (
-                            {d < 0
-                              ? t("subs.past")
-                              : t("subs.daysSuffix", { days: d })}
-                            )
-                          </span>
+                          {charge.label}
+                          {charge.relative ? (
+                            <span className="ml-1 text-xs text-muted">
+                              ({charge.relative})
+                            </span>
+                          ) : null}
                         </td>
                         <td className="px-4 py-3">
                           {s.shared ? (
@@ -478,41 +615,21 @@ export function SubscriptionsClient() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-1">
-                            {s.active ? (
+                            {s.active && charge.next ? (
                               <button
                                 type="button"
-                                className="rounded-lg px-2 py-2 text-xs font-semibold text-fg-secondary hover:bg-surface-alt hover:text-fg"
+                                className="min-h-11 rounded-lg px-3 text-xs font-semibold text-fg-secondary hover:bg-surface-alt hover:text-fg"
                                 aria-label={t("dashboard.horizonRecordAria", {
                                   name: s.name,
                                 })}
-                                onClick={() => {
-                                  const dueOn = formatCalendarDate(next);
-                                  const advanced = nextCycleDate(s, dueOn);
-                                  if (!advanced) return;
-                                  updateSubscription(s.id, {
-                                    name: s.name,
-                                    provider: s.provider,
-                                    iconKey: s.iconKey ?? "",
-                                    category: s.category,
-                                    billingCycle: s.billingCycle,
-                                    customPeriodMonths: s.customPeriodMonths,
-                                    totalPrice: s.totalPrice,
-                                    currency: s.currency,
-                                    shared: s.shared,
-                                    shareCount: s.shareCount,
-                                    nextPaymentDate: advanced,
-                                    notes: s.notes ?? "",
-                                    active: s.active,
-                                    reviewFlag: s.reviewFlag ?? false,
-                                  });
-                                }}
+                                onClick={() => markCharged(s, charge.next as Date)}
                               >
                                 {t("dashboard.horizonRecord")}
                               </button>
                             ) : null}
                             <button
                               type="button"
-                              className="rounded-lg p-2 text-muted hover:bg-surface-alt hover:text-fg"
+                              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted hover:bg-surface-alt hover:text-fg"
                               aria-label={t("subs.editAria", { name: s.name })}
                               onClick={() => {
                                 setEditing(s);
@@ -523,7 +640,7 @@ export function SubscriptionsClient() {
                             </button>
                             <button
                               type="button"
-                              className="border border-transparent p-2 text-muted hover:border-danger/30 hover:bg-danger/10 hover:text-danger"
+                              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted hover:bg-danger/10 hover:text-danger"
                               aria-label={t("subs.deleteAria", { name: s.name })}
                               onClick={() => {
                                 if (

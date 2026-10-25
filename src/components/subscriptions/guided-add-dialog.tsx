@@ -256,7 +256,6 @@ export function GuidedAddDialog({
             <input
               className="slice-input"
               value={name}
-              autoFocus
               onChange={(event) => setName(event.target.value)}
             />
           </label>
@@ -289,7 +288,6 @@ export function GuidedAddDialog({
               inputMode="decimal"
               className="slice-input tabular-nums"
               value={price}
-              autoFocus
               aria-label={t("guided.priceTitle")}
               onChange={(event) => setPrice(event.target.value)}
             />

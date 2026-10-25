@@ -13,3 +13,11 @@ The subscriptions page is the register: search by name or provider, the same cha
 The app shell drops the dot grid, card gradients, and glow on buttons. Those were decoration on a screen someone uses every few days. Colour stays on a marked charge and on the chart marks. Navigation uses weight, not a coloured icon. Route changes do not animate; that motion would play on every visit.
 
 The landing page keeps its own page. This pass does not replace that art direction.
+
+## Phone and the clock
+
+Below the `md` breakpoint the register is a stack of rows: mark, name, personal monthly share, next date, and actions that are at least 44px. The wide table stays from `md` up, with the name column stuck to the left if the rest still scrolls. Filter chips wrap, so a category is not hidden in a scrollbar-less row.
+
+“Today” is read in the browser after mount. A server in UTC and a phone in Europe would otherwise disagree about the 14-day window for a few hours around midnight, and React would hydrate the wrong list. Until that local day exists, the horizon reserves its space and the register shows the stored calendar date without a relative day count.
+
+Inputs are 16px so iOS does not zoom the page on focus. The sticky header is a solid surface, with safe-area padding, and a skip link targets the main content. Charts load in their own chunk so the first view of the horizon does not wait on the chart library.

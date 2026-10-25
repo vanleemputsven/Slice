@@ -90,6 +90,7 @@
 /* Reserve vertical scrollbar width so toggling overflow (e.g. taller login form) does not shift layout. */
 html {
   scrollbar-gutter: stable;
+  touch-action: manipulation;
 }
 
 body {
@@ -127,7 +128,11 @@ body {
 
   dialog::backdrop {
     background: rgb(5 6 9 / 0.75);
-    backdrop-filter: blur(4px);
+  }
+
+  dialog {
+    overscroll-behavior: contain;
+    max-width: calc(100vw - 1.5rem);
   }
 }
 
@@ -192,8 +197,13 @@ body {
     border-color: rgb(255 255 255 / 0.12);
   }
 
+  .slice-btn-primary,
+  .slice-btn-secondary {
+    min-height: 2.75rem;
+  }
+
   .slice-input {
-    @apply mt-1 block w-full px-3.5 py-2.5 text-sm transition-[border-color,box-shadow];
+    @apply mt-1 block w-full px-3.5 py-2.5 text-base transition-[border-color,box-shadow];
     border-radius: var(--slice-radius-md);
     color: rgb(var(--slice-fg));
     background: rgb(var(--slice-canvas) / 0.55);
@@ -218,9 +228,9 @@ body {
   }
 
   .slice-header-shell {
-    border-bottom: 1px solid rgb(255 255 255 / 0.06);
-    background: rgb(var(--slice-canvas) / 0.75);
-    backdrop-filter: blur(20px) saturate(1.2);
+    border-bottom: 1px solid rgb(255 255 255 / 0.08);
+    background: rgb(var(--slice-canvas));
+    padding-top: env(safe-area-inset-top);
   }
 
   /* Landing ticker: GPU-friendly loop; JS omits animated track when reduced motion is on. */

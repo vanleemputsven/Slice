@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useSubscriptions } from "@/components/providers/subscriptions-provider";
@@ -17,7 +18,7 @@ import type {
 } from "@/lib/validation/subscription";
 import { buildInsights } from "@/lib/subscriptions/insights";
 import { formatCurrency } from "@/lib/utils/currency";
-import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
+import { useLocalToday } from "@/lib/ui/use-local-today";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
 import { DashboardInsights } from "@/components/dashboard/dashboard-insights";
 import { MonthlyShareExplorer } from "@/components/dashboard/monthly-share-explorer";
@@ -25,6 +26,14 @@ import { TopCostFocus } from "@/components/dashboard/top-cost-focus";
 import { GuidedAddDialog } from "@/components/subscriptions/guided-add-dialog";
 import { SubscriptionFormDialog } from "@/components/subscriptions/subscription-form-dialog";
 import { ProviderAvatar } from "@/components/subscriptions/provider-avatar";
+
+const DashboardCharts = dynamic(
+  () =>
+    import("@/components/dashboard/dashboard-charts").then(
+      (mod) => mod.DashboardCharts
+    ),
+  { loading: () => null }
+);
 
 function subscriptionToForm(
   sub: SubscriptionRecord,
@@ -101,20 +110,23 @@ export function DashboardClient() {
   const { t, locale } = useSliceT();
   const dateLoc = sliceDateLocale(locale);
 
+  const today = useLocalToday();
   const summary = useMemo(
-    () => summarizeSubscriptions(subscriptions, new Date()),
-    [subscriptions]
+    () => summarizeSubscriptions(subscriptions, today ?? new Date(2026, 0, 1)),
+    [subscriptions, today]
   );
 
   const insights = useMemo(
     () =>
-      buildInsights(
-        subscriptions,
-        new Date(),
-        preferences.currency ?? "USD",
-        locale
-      ),
-    [subscriptions, preferences.currency, locale]
+      today
+        ? buildInsights(
+            subscriptions,
+            today,
+            preferences.currency ?? "USD",
+            locale
+          )
+        : [],
+    [subscriptions, today, preferences.currency, locale]
   );
 
   const hourly = preferences.hourlyWage;
@@ -131,14 +143,15 @@ export function DashboardClient() {
     [hoursPerMo, preferences.hoursPerWorkday]
   );
 
-  const today = useMemo(() => new Date(), []);
   const horizon = useMemo(
     () =>
-      listRenewalHorizon(
-        subscriptions,
-        today,
-        preferences.reminderLeadDays
-      ),
+      today
+        ? listRenewalHorizon(
+            subscriptions,
+            today,
+            preferences.reminderLeadDays
+          )
+        : [],
     [subscriptions, today, preferences.reminderLeadDays]
   );
   const horizonTotal = useMemo(
@@ -197,7 +210,9 @@ export function DashboardClient() {
             >
               {t("dashboard.horizonTitle")}
             </h2>
-            {horizon.length === 0 ? (
+            {!today ? (
+              <p className="mt-3 h-16" aria-hidden />
+            ) : horizon.length === 0 ? (
               <p className="mt-2 max-w-[46ch] text-sm text-fg-secondary">
                 {hasSubscriptions
                   ? t("dashboard.horizonEmpty")
@@ -251,7 +266,7 @@ export function DashboardClient() {
         >
           {t("dashboard.horizonAdd")}
         </button>
-        {horizon.length > 0 ? (
+        {today && horizon.length > 0 ? (
           <ul className="mt-5 divide-y divide-white/[0.07]" aria-labelledby="horizon-panel">
             {horizon.map((charge) => {
               const sub = subscriptionById.get(charge.subscriptionId);
@@ -389,7 +404,7 @@ export function DashboardClient() {
               {summary.activeCount}
             </p>
             <p className="mt-1 text-xs text-muted">
-              {summary.upcomingCount} {t("dashboard.statDue30")}
+              {today ? summary.upcomingCount : "—"} {t("dashboard.statDue30")}
             </p>
           </article>
 
