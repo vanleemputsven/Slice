@@ -1,4 +1,4 @@
-import { BRAND_MARKS } from "@/lib/subscriptions/brand-marks";
+import { BRAND_MARKS, type BrandMark } from "@/lib/subscriptions/brand-marks";
 
 /** Spoken names and stored icon keys that share one glyph. */
 const ALIASES: Record<string, string> = {
@@ -39,7 +39,39 @@ const ALIASES: Record<string, string> = {
   googledrive: "googledrive",
   gemini: "googlegemini",
   googlegemini: "googlegemini",
+  googleone: "google",
+  google: "google",
   steam: "steam",
+  claude: "claude",
+  dazn: "dazn",
+  now: "now",
+  rtl: "rtl",
+  rtlplus: "rtl",
+  sky: "sky",
+  disney: "disney",
+  disneyplus: "disney",
+  prime: "prime",
+  primevideo: "prime",
+  amazonprime: "prime",
+  xbox: "xbox",
+  xboxgamepass: "xbox",
+  nintendo: "nintendo",
+  nintendoswitch: "nintendo",
+  nintendoswitchonline: "nintendo",
+  hulu: "hulu",
+  peacock: "peacock",
+  chatgpt: "chatgpt",
+  openai: "chatgpt",
+  microsoft365: "microsoft365",
+  microsoft: "microsoft365",
+  office365: "microsoft365",
+  vtmgo: "vtmgo",
+  vtmgoplus: "vtmgo",
+  videoland: "videoland",
+  nlziet: "nlziet",
+  canal: "canal",
+  canalplus: "canal",
+  mycanal: "canal",
 };
 
 export function normalizeBrandKey(value: string): string {
@@ -60,24 +92,45 @@ export function brandSlugFor(input: {
   return null;
 }
 
-/** Near-black brand inks disappear on the dark canvas, so those glyphs go light. */
+/**
+ * Near-black brand inks disappear on the dark canvas, so those glyphs go light.
+ * The check is the brightest channel. Relative luminance would call a pure red
+ * such as YouTube almost black, and the mark would turn white.
+ */
 export function brandGlyph(hex: string): string {
   const red = Number.parseInt(hex.slice(0, 2), 16);
   const green = Number.parseInt(hex.slice(2, 4), 16);
   const blue = Number.parseInt(hex.slice(4, 6), 16);
-  const luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
-  if (luminance < 0.22) return "#F6F7FB";
+  if (Math.max(red, green, blue) < 80) return "#F6F7FB";
   return `#${hex}`;
 }
+
+export type ResolvedBrandMark = {
+  slug: string;
+  path: string;
+  glyph: string;
+  viewBox: string;
+  paths: readonly string[];
+  stroke?: number;
+  fills?: readonly string[];
+};
 
 export function brandMarkFor(input: {
   iconKey?: string | null;
   name?: string | null;
   provider?: string | null;
-}): { slug: string; path: string; glyph: string } | null {
+}): ResolvedBrandMark | null {
   const slug = brandSlugFor(input);
   if (!slug) return null;
-  const mark = BRAND_MARKS[slug];
+  const mark: BrandMark | undefined = BRAND_MARKS[slug];
   if (!mark) return null;
-  return { slug, path: mark.path, glyph: brandGlyph(mark.hex) };
+  return {
+    slug,
+    path: mark.path,
+    glyph: brandGlyph(mark.hex),
+    viewBox: mark.viewBox ?? "0 0 24 24",
+    paths: mark.paths ?? [mark.path],
+    stroke: mark.stroke,
+    fills: mark.fills,
+  };
 }

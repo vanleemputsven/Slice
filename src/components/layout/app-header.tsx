@@ -1,12 +1,15 @@
 "use client";
 
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, List, LogOut, Settings } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { SliceMark } from "@/components/brand/slice-mark";
 import { LanguageToggle } from "@/components/layout/language-toggle";
 import { HEADER_CONTROL_SHELL } from "@/components/layout/header-controls";
+import {
+  SegmentedNav,
+  SLICE_EASE_OUT,
+} from "@/components/ui/segmented-control";
 import { useSubscriptions } from "@/components/providers/subscriptions-provider";
 import { createClient } from "@/lib/supabase/client";
 import { useSliceT } from "@/lib/i18n/use-slice-t";
@@ -18,23 +21,26 @@ export function AppHeader() {
   const { preferences, syncError, clearSyncError } = useSubscriptions();
   const displayName = preferences.preferredName?.trim() ?? "";
 
-  const item = (href: string, label: string, icon: ReactNode) => {
-    const active =
-      pathname === href || pathname.startsWith(`${href}/`);
-    return (
-      <Link
-        href={href}
-        className={`flex min-h-11 items-center justify-center gap-2 rounded-full px-2 text-center text-xs leading-tight transition-[background,color] sm:px-3 sm:text-sm ${
-          active
-            ? "bg-white/10 font-semibold text-fg"
-            : "font-medium text-fg-secondary hover:bg-white/[0.06] hover:text-fg"
-        }`}
-      >
-        <span className="hidden text-current sm:inline">{icon}</span>
-        <span>{label}</span>
-      </Link>
-    );
-  };
+  const navItems = [
+    {
+      href: "/dashboard",
+      label: t("header.navOverview"),
+      active:
+        pathname === "/dashboard" || pathname.startsWith("/dashboard/"),
+    },
+    {
+      href: "/subscriptions",
+      label: t("header.navSubscriptions"),
+      active:
+        pathname === "/subscriptions" ||
+        pathname.startsWith("/subscriptions/"),
+    },
+    {
+      href: "/settings",
+      label: t("header.navSettings"),
+      active: pathname === "/settings" || pathname.startsWith("/settings/"),
+    },
+  ];
 
   return (
     <header className="slice-header-shell sticky top-0 z-20">
@@ -63,60 +69,50 @@ export function AppHeader() {
           </span>
         </div>
       ) : null}
-      <div className="mx-auto max-w-6xl px-4 pb-3 pt-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <Link href="/dashboard" className="shrink-0" aria-label={t("header.homeAria")}>
-              <SliceMark />
-            </Link>
-            {displayName ? (
-              <p
-                className="hidden min-w-0 truncate font-display text-sm font-semibold tracking-tight text-fg-secondary sm:block"
-                title={displayName}
-              >
-                {t("header.greetingNamed", { name: displayName })}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <LanguageToggle />
-            <div className={`inline-flex ${HEADER_CONTROL_SHELL}`}>
-              <button
-                type="button"
-                onClick={async () => {
-                  const supabase = createClient();
-                  await supabase.auth.signOut();
-                  router.refresh();
-                  router.push("/login");
-                }}
-                className="flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3 text-sm font-semibold text-fg-secondary transition-[background,color] hover:bg-white/[0.06] hover:text-fg"
-              >
-                <LogOut className="size-4 shrink-0" aria-hidden />
-                <span className="hidden sm:inline">{t("header.signOut")}</span>
-              </button>
-            </div>
+
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-3 px-4 py-3 sm:gap-x-4 sm:px-6 lg:px-8">
+        <Link
+          href="/dashboard"
+          className="shrink-0 transition-opacity duration-150 hover:opacity-90"
+          style={{ transitionTimingFunction: SLICE_EASE_OUT }}
+          aria-label={t("header.homeAria")}
+        >
+          <SliceMark />
+        </Link>
+
+        <SegmentedNav
+          items={navItems}
+          ariaLabel={t("header.navMain")}
+          className="order-last w-full basis-full sm:order-none sm:ml-1 sm:w-auto sm:basis-auto md:ml-2"
+        />
+
+        <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2 sm:gap-2.5">
+          {displayName ? (
+            <p
+              className="hidden min-w-0 max-w-[9rem] truncate font-display text-sm font-medium tracking-tight text-muted lg:block xl:max-w-[12rem]"
+              title={displayName}
+            >
+              {t("header.greetingNamed", { name: displayName })}
+            </p>
+          ) : null}
+          <LanguageToggle />
+          <div className={`inline-flex ${HEADER_CONTROL_SHELL}`}>
+            <button
+              type="button"
+              onClick={async () => {
+                const supabase = createClient();
+                await supabase.auth.signOut();
+                router.refresh();
+                router.push("/login");
+              }}
+              className="flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3 text-sm font-semibold text-fg-secondary transition-[background,color,transform] duration-150 hover:bg-white/[0.06] hover:text-fg active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100"
+              style={{ transitionTimingFunction: SLICE_EASE_OUT }}
+            >
+              <LogOut className="size-4 shrink-0" aria-hidden />
+              <span className="hidden sm:inline">{t("header.signOut")}</span>
+            </button>
           </div>
         </div>
-        <nav
-          className="mt-3 grid grid-cols-3 gap-1 sm:flex sm:w-fit"
-          aria-label={t("header.navMain")}
-        >
-          {item(
-            "/dashboard",
-            t("header.navOverview"),
-            <LayoutGrid className="size-4 shrink-0" aria-hidden />
-          )}
-          {item(
-            "/subscriptions",
-            t("header.navSubscriptions"),
-            <List className="size-4 shrink-0" aria-hidden />
-          )}
-          {item(
-            "/settings",
-            t("header.navSettings"),
-            <Settings className="size-4 shrink-0" aria-hidden />
-          )}
-        </nav>
       </div>
     </header>
   );

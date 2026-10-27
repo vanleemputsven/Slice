@@ -1,9 +1,13 @@
-# Why adding a charge is a short interview
+# Why adding charges is a picker, then a plan
 
-People know the service, not the form. Netflix, Spotify, a gym, a phone plan: the useful facts are the same four, asked one at a time. Which service, what leaves the account each time, on which date, and whether the account is shared. A fifth question appears only when the service is not in that list, and it asks for the name.
+People know the services they pay for. They do not know a form. The first screen is a wall of those services: tap Netflix, Spotify, the gym, the phone bill. Nothing is saved yet.
 
-The interview does not suggest a price. A preset €15.99 would be a guess, and the horizon would then show a charge the person does not pay. The cycle price is what they type.
+The next screen is one service at a time. Where we have a public list price for the chosen country, the plans are the choice: Netflix Standard is 2 screens, Spotify Family is up to 6 accounts. The person confirms that plan, or types the amount on their own bill. A typed amount wins. Sharing the bill is a separate question from how many screens the plan allows, because two screens is not two people splitting the cost. The next charge defaults to the same calendar day next month and stays visible, so it can be changed now or later on the row.
 
-The full form stays available from the first question for a custom cycle, notes, or a review mark. Editing an existing row still opens that form, because those fields are already filled.
+"Add the rest that have a price" saves every remaining row that already has an amount. A row without a catalog price, and without a typed amount, stays on screen. Closing the window keeps only the rows already confirmed.
 
-A known service stores its icon key. The list and the 14-day window draw that brand's glyph when Simple Icons publishes one (Spotify, Netflix, YouTube, iCloud, and the other marks in `brand-marks.ts`). A gym, a phone plan, or a name we do not have a glyph for stays a pair of letters. The paths are CC0 and live in the repo so the page does not load the whole icon set.
+Euro amounts open on Belgium, because that list is the fullest. Pounds open on the United Kingdom, dollars on the United States. The country control switches the prices. A service we sell only in one country, such as Streamz, is hidden elsewhere.
+
+A weekly charge still uses all fields. The ledger stores a month, a year, or a custom number of months, not a week.
+
+The prices, the date they were checked, and the gaps we refused to fill are in `docs/subscription-catalog.md`.

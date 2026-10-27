@@ -8,6 +8,11 @@ import { GuidedAddDialog } from "@/components/subscriptions/guided-add-dialog";
 import { ProviderAvatar } from "@/components/subscriptions/provider-avatar";
 import { SubscriptionFormDialog } from "@/components/subscriptions/subscription-form-dialog";
 import { SubscriptionsSkeleton } from "@/components/subscriptions/subscriptions-skeleton";
+import {
+  SubscriptionsToolbar,
+  type FilterShared,
+  type SortKey,
+} from "@/components/subscriptions/subscriptions-toolbar";
 import type {
   SubscriptionFormInput,
   SubscriptionRecord,
@@ -21,25 +26,11 @@ import {
   nextCycleDate,
 } from "@/lib/subscriptions/calculations";
 import { matchesRegisterQuery } from "@/lib/subscriptions/register";
-import { SUBSCRIPTION_CATEGORIES } from "@/lib/subscriptions/categories";
 import { formatCurrency } from "@/lib/utils/currency";
 import { subscriptionCategoryLabel } from "@/lib/i18n/category-labels";
 import { sliceDateLocale, sliceNumberLocale } from "@/lib/i18n/locale";
 import { useSliceT } from "@/lib/i18n/use-slice-t";
 import { useLocalToday } from "@/lib/ui/use-local-today";
-import { HEADER_CONTROL_SHELL } from "@/components/layout/header-controls";
-
-type SortKey = "cost" | "next" | "name" | "category";
-type FilterShared = "all" | "shared" | "solo";
-
-/** Matches header nav / language toggle — one visual system */
-function segmentClass(active: boolean) {
-  return `min-h-11 shrink-0 snap-start rounded-full px-3.5 py-2 text-sm font-semibold transition-[background,color,box-shadow] ${
-    active
-      ? "bg-white/12 text-fg shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]"
-      : "text-fg-secondary hover:bg-white/[0.06] hover:text-fg"
-  }`;
-}
 
 export function SubscriptionsClient() {
   const searchParams = useSearchParams();
@@ -78,6 +69,8 @@ export function SubscriptionsClient() {
   const [query, setQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterShared, setFilterShared] = useState<FilterShared>("all");
+  const [filterDueSoon, setFilterDueSoon] = useState(false);
+  const [filterReview, setFilterReview] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [editing, setEditing] = useState<SubscriptionRecord | null>(null);
@@ -137,6 +130,15 @@ export function SubscriptionsClient() {
     };
   };
 
+  const showReviewFilter = useMemo(
+    () => subscriptions.some((s) => s.reviewFlag),
+    [subscriptions]
+  );
+
+  useEffect(() => {
+    if (!showReviewFilter && filterReview) setFilterReview(false);
+  }, [showReviewFilter, filterReview]);
+
   const filteredSorted = useMemo(() => {
     let rows = subscriptions.filter((s) => matchesRegisterQuery(s, query));
     if (filterCategory !== "all") {
@@ -144,8 +146,19 @@ export function SubscriptionsClient() {
     }
     if (filterShared === "shared") rows = rows.filter((s) => s.shared);
     if (filterShared === "solo") rows = rows.filter((s) => !s.shared);
+    if (filterDueSoon && today) {
+      rows = rows.filter((s) => {
+        if (!s.active) return false;
+        const next = getNextPaymentOnOrAfter(s, today);
+        const until = daysUntil(next, today);
+        return until >= 0 && until <= preferences.reminderLeadDays;
+      });
+    }
+    if (filterReview) {
+      rows = rows.filter((s) => Boolean(s.reviewFlag));
+    }
 
-    const now = new Date();
+    const now = today ?? new Date();
     rows.sort((a, b) => {
       if (sort === "cost") {
         return getMonthlyMyShare(b) - getMonthlyMyShare(a);
@@ -156,13 +169,20 @@ export function SubscriptionsClient() {
           getNextPaymentOnOrAfter(b, now).getTime()
         );
       }
-      if (sort === "category") {
-        return a.category.localeCompare(b.category);
-      }
       return a.name.localeCompare(b.name);
     });
     return rows;
-  }, [subscriptions, query, filterCategory, filterShared, sort]);
+  }, [
+    subscriptions,
+    query,
+    filterCategory,
+    filterShared,
+    filterDueSoon,
+    filterReview,
+    sort,
+    today,
+    preferences.reminderLeadDays,
+  ]);
 
   useEffect(() => {
     if (!ready || !highlightId) return;
@@ -277,139 +297,24 @@ export function SubscriptionsClient() {
         </div>
       ) : (
         <>
-          <div
-            className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 sm:p-4"
-            role="region"
-            aria-label={t("subs.filterRegion")}
-          >
-            <label className="mb-4 block max-w-sm">
-              <span className="slice-label" id="subs-search-label">
-                {t("subs.searchLabel")}
-              </span>
-              <input
-                type="search"
-                className="slice-input"
-                aria-labelledby="subs-search-label"
-                placeholder={t("subs.searchPlaceholder")}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </label>
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:gap-8">
-              <div className="min-w-0 flex-1">
-                <p id="subs-filter-cat" className="slice-label mb-2">
-                  {t("subs.category")}
-                </p>
-                <div
-                  className="rounded-xl bg-white/[0.03] p-1 ring-1 ring-white/[0.06]"
-                  role="group"
-                  aria-labelledby="subs-filter-cat"
-                >
-                  <div
-                    className="flex flex-wrap gap-1 px-0.5 py-0.5"
-                  >
-                    <button
-                      type="button"
-                      aria-pressed={filterCategory === "all"}
-                      className={segmentClass(filterCategory === "all")}
-                      onClick={() => setFilterCategory("all")}
-                    >
-                      {t("subs.all")}
-                    </button>
-                    {SUBSCRIPTION_CATEGORIES.map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        aria-pressed={filterCategory === c}
-                        className={segmentClass(filterCategory === c)}
-                        onClick={() => setFilterCategory(c)}
-                      >
-                        {subscriptionCategoryLabel(c, locale)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end sm:gap-5 lg:shrink-0">
-                <div className="min-w-0 sm:w-[min(100%,14rem)]">
-                  <p id="subs-filter-share" className="slice-label mb-2">
-                    {t("subs.sharing")}
-                  </p>
-                  <div
-                    role="group"
-                    aria-labelledby="subs-filter-share"
-                    className={`flex max-w-full flex-wrap gap-1 ${HEADER_CONTROL_SHELL}`}
-                  >
-                    <button
-                      type="button"
-                      aria-pressed={filterShared === "all"}
-                      className={segmentClass(filterShared === "all")}
-                      onClick={() => setFilterShared("all")}
-                    >
-                      {t("subs.all")}
-                    </button>
-                    <button
-                      type="button"
-                      aria-pressed={filterShared === "shared"}
-                      className={segmentClass(filterShared === "shared")}
-                      onClick={() => setFilterShared("shared")}
-                    >
-                      {t("subs.shared")}
-                    </button>
-                    <button
-                      type="button"
-                      aria-pressed={filterShared === "solo"}
-                      className={segmentClass(filterShared === "solo")}
-                      onClick={() => setFilterShared("solo")}
-                    >
-                      {t("subs.notShared")}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="min-w-0 flex-1 sm:min-w-[min(100%,22rem)]">
-                  <p id="subs-filter-sort" className="slice-label mb-2">
-                    {t("subs.sortBy")}
-                  </p>
-                  <div
-                    role="group"
-                    aria-labelledby="subs-filter-sort"
-                    className={`flex max-w-full flex-wrap gap-1 ${HEADER_CONTROL_SHELL}`}
-                  >
-                    {(
-                      [
-                        ["next", "subs.sortNext"],
-                        ["cost", "subs.sortCost"],
-                        ["name", "subs.sortName"],
-                        ["category", "subs.sortCategory"],
-                      ] as const
-                    ).map(([key, labelKey]) => (
-                      <button
-                        key={key}
-                        type="button"
-                        aria-pressed={sort === key}
-                        className={segmentClass(sort === key)}
-                        onClick={() => setSort(key)}
-                      >
-                        {t(labelKey)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <p
-              className="mt-3 border-t border-white/[0.05] pt-3 text-xs text-muted"
-              aria-live="polite"
-            >
-              {t("subs.listSummary", {
-                shown: filteredSorted.length,
-                total: subscriptions.length,
-              })}
-            </p>
-          </div>
+          <SubscriptionsToolbar
+            query={query}
+            onQueryChange={setQuery}
+            filterCategory={filterCategory}
+            onFilterCategoryChange={setFilterCategory}
+            filterShared={filterShared}
+            onFilterSharedChange={setFilterShared}
+            filterDueSoon={filterDueSoon}
+            onFilterDueSoonChange={setFilterDueSoon}
+            filterReview={filterReview}
+            onFilterReviewChange={setFilterReview}
+            showReviewFilter={showReviewFilter}
+            sort={sort}
+            onSortChange={setSort}
+            shown={filteredSorted.length}
+            total={subscriptions.length}
+            locale={locale}
+          />
 
           {filteredSorted.length === 0 ? (
             <p className="py-8 text-sm text-fg-secondary md:hidden">
@@ -475,7 +380,7 @@ export function SubscriptionsClient() {
                       ) : null}
                       <button
                         type="button"
-                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted hover:bg-surface-alt hover:text-fg"
+                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted transition-[background,color,transform] duration-150 hover:bg-white/[0.06] hover:text-fg active:scale-[0.97]"
                         aria-label={t("subs.editAria", { name: s.name })}
                         onClick={() => {
                           setEditing(s);
@@ -486,7 +391,7 @@ export function SubscriptionsClient() {
                       </button>
                       <button
                         type="button"
-                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted hover:bg-danger/10 hover:text-danger"
+                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted transition-[background,color,transform] duration-150 hover:bg-danger/10 hover:text-danger active:scale-[0.97]"
                         aria-label={t("subs.deleteAria", { name: s.name })}
                         onClick={() => {
                           if (
@@ -508,22 +413,44 @@ export function SubscriptionsClient() {
           )}
 
           <div className="slice-card hidden overflow-hidden md:block">
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-white/[0.06] bg-white/[0.02] text-xs font-semibold text-muted">
+            <div className="slice-register-scroll">
+              <table className="slice-register-table">
+                <colgroup>
+                  <col style={{ width: "24%" }} />
+                  <col style={{ width: "13%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "9%" }} />
+                  <col style={{ width: "9%" }} />
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "6%" }} />
+                  <col style={{ width: "17%" }} />
+                </colgroup>
+                <thead>
                   <tr>
-                    <th className="px-4 py-3.5 font-medium">{t("subs.colService")}</th>
-                    <th className="px-4 py-3.5 font-medium">{t("subs.colCategory")}</th>
-                    <th className="px-4 py-3.5 font-medium">{t("subs.colBilling")}</th>
-                    <th className="px-4 py-3.5 font-medium tabular-nums">
-                      {t("subs.colFullMo")}
+                    <th scope="col">{t("subs.colService")}</th>
+                    <th scope="col">{t("subs.colCategory")}</th>
+                    <th scope="col">{t("subs.colBilling")}</th>
+                    <th scope="col" data-align="end">
+                      {t("subs.colFull")}
+                      <span className="slice-register-unit">
+                        {t("subs.colPerMonth")}
+                      </span>
                     </th>
-                    <th className="px-4 py-3.5 font-medium tabular-nums">
-                      {t("subs.colYoursMo")}
+                    <th scope="col" data-align="end">
+                      {t("subs.colYours")}
+                      <span className="slice-register-unit">
+                        {t("subs.colPerMonth")}
+                      </span>
                     </th>
-                    <th className="px-4 py-3.5 font-medium">{t("subs.colNext")}</th>
-                    <th className="px-4 py-3.5 font-medium">{t("subs.colSplit")}</th>
-                    <th className="px-4 py-3 font-medium sr-only">{t("subs.colActions")}</th>
+                    <th scope="col" data-align="end">
+                      {t("subs.colNext")}
+                    </th>
+                    <th scope="col" data-align="end">
+                      {t("subs.colSplit")}
+                    </th>
+                    <th scope="col" className="slice-register-actions">
+                      <span className="sr-only">{t("subs.colActions")}</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -531,7 +458,7 @@ export function SubscriptionsClient() {
                     <tr>
                       <td
                         colSpan={8}
-                        className="px-4 py-8 text-sm text-fg-secondary"
+                        className="px-4 py-10 text-sm text-fg-secondary"
                       >
                         {t("subs.noMatches")}
                       </td>
@@ -543,22 +470,21 @@ export function SubscriptionsClient() {
                       <tr
                         key={s.id}
                         data-subscription-row={s.id}
-                        className={`border-b border-border-subtle/70 last:border-0 hover:bg-surface-alt/30 ${
-                          highlightId === s.id
-                            ? "bg-accent/[0.09] ring-1 ring-inset ring-accent/35"
-                            : ""
-                        }`}
+                        data-highlighted={
+                          highlightId === s.id ? "true" : undefined
+                        }
+                        className="slice-table-row group border-b border-white/[0.045] last:border-0"
                       >
-                        <td className="sticky left-0 z-10 bg-surface px-4 py-3">
-                          <div className="flex items-center gap-3">
+                        <td className="slice-table-sticky sticky left-0 z-10">
+                          <div className="flex min-w-0 items-center gap-3">
                             <ProviderAvatar
                               name={s.name}
                               provider={s.provider}
                               iconKey={s.iconKey}
                               size="sm"
                             />
-                            <div>
-                              <p className="font-medium text-fg">
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-fg">
                                 {s.name}
                                 {!s.active && (
                                   <span className="ml-2 text-xs font-normal text-muted">
@@ -566,9 +492,11 @@ export function SubscriptionsClient() {
                                   </span>
                                 )}
                               </p>
-                              <p className="text-xs text-muted">{s.provider}</p>
+                              <p className="truncate text-xs text-muted">
+                                {s.provider}
+                              </p>
                               {(s.notes || s.reviewFlag) && (
-                                <p className="mt-1 text-[11px] text-fg-secondary">
+                                <p className="mt-1 truncate text-[11px] text-fg-secondary">
                                   {s.reviewFlag && (
                                     <span className="mr-2 rounded-full bg-warning/15 px-2 py-0.5 text-[11px] font-semibold text-warning">
                                       {t("subs.reviewBadge")}
@@ -580,20 +508,35 @@ export function SubscriptionsClient() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-fg-secondary">
+                        <td className="truncate text-fg-secondary">
                           {subscriptionCategoryLabel(s.category, locale)}
                         </td>
-                        <td className="px-4 py-3 text-fg-secondary">
+                        <td className="whitespace-nowrap text-fg-secondary">
                           {billingLabel(s)}
                         </td>
-                        <td className="px-4 py-3 font-mono tabular-nums text-fg-secondary">
-                          {formatCurrency(getMonthlyTotalPrice(s), cur, numberLoc)}
-                        </td>
-                        <td className="px-4 py-3 font-mono tabular-nums font-semibold text-fg">
-                          {formatCurrency(getMonthlyMyShare(s), cur, numberLoc)}
+                        <td
+                          data-align="end"
+                          className="font-mono tabular-nums text-fg-secondary"
+                        >
+                          {formatCurrency(
+                            getMonthlyTotalPrice(s),
+                            cur,
+                            numberLoc
+                          )}
                         </td>
                         <td
-                          className={`px-4 py-3 tabular-nums ${
+                          data-align="end"
+                          className="font-mono tabular-nums font-semibold text-fg"
+                        >
+                          {formatCurrency(
+                            getMonthlyMyShare(s),
+                            cur,
+                            numberLoc
+                          )}
+                        </td>
+                        <td
+                          data-align="end"
+                          className={`whitespace-nowrap tabular-nums ${
                             charge.marked ? "text-accent" : "text-muted"
                           }`}
                         >
@@ -604,7 +547,7 @@ export function SubscriptionsClient() {
                             </span>
                           ) : null}
                         </td>
-                        <td className="px-4 py-3">
+                        <td data-align="end">
                           {s.shared ? (
                             <span className="font-mono text-sm tabular-nums text-fg">
                               ÷{s.shareCount ?? "—"}
@@ -613,24 +556,28 @@ export function SubscriptionsClient() {
                             <span className="text-xs text-muted">—</span>
                           )}
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-end gap-1">
+                        <td className="slice-register-actions">
+                          <div className="flex justify-end gap-1 opacity-70 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
                             {s.active && charge.next ? (
                               <button
                                 type="button"
-                                className="min-h-11 rounded-lg px-3 text-xs font-semibold text-fg-secondary hover:bg-surface-alt hover:text-fg"
+                                className="min-h-11 rounded-lg px-3 text-xs font-semibold text-fg-secondary transition-[background,color,transform] duration-150 hover:bg-white/[0.06] hover:text-fg active:scale-[0.97]"
                                 aria-label={t("dashboard.horizonRecordAria", {
                                   name: s.name,
                                 })}
-                                onClick={() => markCharged(s, charge.next as Date)}
+                                onClick={() =>
+                                  markCharged(s, charge.next as Date)
+                                }
                               >
                                 {t("dashboard.horizonRecord")}
                               </button>
                             ) : null}
                             <button
                               type="button"
-                              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted hover:bg-surface-alt hover:text-fg"
-                              aria-label={t("subs.editAria", { name: s.name })}
+                              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted transition-[background,color,transform] duration-150 hover:bg-white/[0.06] hover:text-fg active:scale-[0.97]"
+                              aria-label={t("subs.editAria", {
+                                name: s.name,
+                              })}
                               onClick={() => {
                                 setEditing(s);
                                 setFormOpen(true);
@@ -640,13 +587,17 @@ export function SubscriptionsClient() {
                             </button>
                             <button
                               type="button"
-                              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted hover:bg-danger/10 hover:text-danger"
-                              aria-label={t("subs.deleteAria", { name: s.name })}
+                              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted transition-[background,color,transform] duration-150 hover:bg-danger/10 hover:text-danger active:scale-[0.97]"
+                              aria-label={t("subs.deleteAria", {
+                                name: s.name,
+                              })}
                               onClick={() => {
                                 if (
                                   typeof window !== "undefined" &&
                                   window.confirm(
-                                    t("subs.deleteConfirm", { name: s.name })
+                                    t("subs.deleteConfirm", {
+                                      name: s.name,
+                                    })
                                   )
                                 ) {
                                   deleteSubscription(s.id);

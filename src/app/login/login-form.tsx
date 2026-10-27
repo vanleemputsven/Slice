@@ -13,7 +13,7 @@ import {
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getSupabasePublicConfig } from "@/lib/supabase/env";
-import { HEADER_CONTROL_SHELL } from "@/components/layout/header-controls";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { AuthBootSkeleton } from "@/components/skeleton/auth-skeleton";
 import type { AppLocale } from "@/lib/i18n/locale";
 import { sliceT, type SliceMessageKey } from "@/lib/i18n/messages";
@@ -217,13 +217,6 @@ export function LoginForm() {
     setFeedback({ kind: "success", text: t("auth.confirmEmail") });
   });
 
-  const segmentClass = (active: boolean) =>
-    `relative z-[1] flex w-1/2 min-w-0 items-center justify-center rounded-full px-3 py-2.5 text-sm font-semibold transition-[color,transform] duration-200 ${
-      active
-        ? "text-fg"
-        : "text-fg-secondary hover:text-fg"
-    } ${active && !reduceMotion ? "scale-[1.02]" : ""}`;
-
   const introTransition = reduceMotion
     ? { duration: 0.2 }
     : { duration: 0.45, ease: [0.26, 0.08, 0.25, 1] as const };
@@ -250,40 +243,18 @@ export function LoginForm() {
         }}
       />
 
-      <div
-        className="absolute right-3 top-3 z-20 sm:right-5 sm:top-5"
-        role="group"
-        aria-label={t("language.toggleAria")}
-      >
-        <div
-          className={`relative inline-flex min-h-0 ${HEADER_CONTROL_SHELL} py-0.5 pl-0.5 pr-0.5`}
-        >
-          <span
-            className="pointer-events-none absolute inset-y-1 w-[calc(50%-5px)] rounded-full bg-white/12 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)] transition-[left] duration-200 ease-out"
-            style={{
-              left: locale === "nl" ? "4px" : "calc(50% + 2px)",
-            }}
-            aria-hidden
-          />
-          <button
-            type="button"
-            className={`relative z-[1] flex min-w-[2.75rem] items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold transition-[color] ${
-              locale === "nl" ? "text-fg" : "text-fg-secondary hover:text-fg"
-            }`}
-            onClick={() => setLoginLocale("nl")}
-          >
-            NL
-          </button>
-          <button
-            type="button"
-            className={`relative z-[1] flex min-w-[2.75rem] items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold transition-[color] ${
-              locale === "en" ? "text-fg" : "text-fg-secondary hover:text-fg"
-            }`}
-            onClick={() => setLoginLocale("en")}
-          >
-            EN
-          </button>
-        </div>
+      <div className="absolute right-3 top-3 z-20 sm:right-5 sm:top-5">
+        <SegmentedControl
+          value={locale}
+          onChange={setLoginLocale}
+          ariaLabel={t("language.toggleAria")}
+          equalWidth
+          size="sm"
+          options={[
+            { value: "nl", label: "NL" },
+            { value: "en", label: "EN" },
+          ]}
+        />
       </div>
 
       <div className="relative mx-auto flex w-full max-w-md flex-col gap-8">
@@ -328,51 +299,28 @@ export function LoginForm() {
           />
 
           <div className="relative">
-            <div
-              role="tablist"
-              aria-label={t("auth.modeTabsAria")}
-              className={`relative mb-8 flex w-full ${HEADER_CONTROL_SHELL}`}
-            >
-              <motion.span
-                aria-hidden
-                className="pointer-events-none absolute inset-y-1 w-[calc(50%-6px)] rounded-full bg-white/14 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.1)]"
-                initial={false}
-                animate={{
-                  left: mode === "signin" ? 4 : "calc(50% + 2px)",
-                }}
-                transition={
-                  reduceMotion
-                    ? { duration: 0.15 }
-                    : { type: "spring", stiffness: 420, damping: 32 }
-                }
-              />
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mode === "signin"}
-                id="tab-signin"
-                className={segmentClass(mode === "signin")}
-                onClick={() => switchMode("signin")}
-              >
-                {t("auth.signInTitle")}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mode === "signup"}
-                id="tab-signup"
-                className={segmentClass(mode === "signup")}
-                onClick={() => switchMode("signup")}
-              >
-                {t("auth.signUpTitle")}
-              </button>
-            </div>
+            <SegmentedControl
+              className="mb-8 w-full"
+              value={mode}
+              onChange={switchMode}
+              ariaLabel={t("auth.modeTabsAria")}
+              equalWidth
+              tabs
+              options={[
+                { value: "signin", label: t("auth.signInTitle") },
+                { value: "signup", label: t("auth.signUpTitle") },
+              ]}
+            />
 
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={mode}
                 role="tabpanel"
-                aria-labelledby={mode === "signin" ? "tab-signin" : "tab-signup"}
+                aria-labelledby={
+                  mode === "signin"
+                    ? "segment-tab-signin"
+                    : "segment-tab-signup"
+                }
                 initial={
                   reduceMotion
                     ? { opacity: 0 }

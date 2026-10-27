@@ -12,7 +12,7 @@ import {
   useReducedMotion,
 } from "framer-motion";
 import { Loader2 } from "lucide-react";
-import { HEADER_CONTROL_SHELL } from "@/components/layout/header-controls";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { AuthBootSkeleton } from "@/components/skeleton/auth-skeleton";
 import type { AppLocale } from "@/lib/i18n/locale";
 import { sliceT, type SliceMessageKey } from "@/lib/i18n/messages";
@@ -283,44 +283,18 @@ export function WelcomeForm({
         }}
       />
 
-      <div
-        className="absolute right-3 top-3 z-20 sm:right-5 sm:top-5"
-        role="group"
-        aria-label={t("language.toggleAria")}
-      >
-        <div
-          className={`relative inline-flex min-h-0 ${HEADER_CONTROL_SHELL} py-0.5 pl-0.5 pr-0.5`}
-        >
-          <span
-            className="pointer-events-none absolute inset-y-1 w-[calc(50%-5px)] rounded-full bg-white/12 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)] transition-[left] duration-200 ease-out"
-            style={{
-              left: locale === "nl" ? "4px" : "calc(50% + 2px)",
-            }}
-            aria-hidden
-          />
-          <button
-            type="button"
-            className={`relative z-[1] flex min-w-[2.75rem] items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold transition-[color] ${
-              locale === "nl" ? "text-fg" : "text-fg-secondary hover:text-fg"
-            }`}
-            onClick={() => {
-              setUiLocale("nl");
-            }}
-          >
-            NL
-          </button>
-          <button
-            type="button"
-            className={`relative z-[1] flex min-w-[2.75rem] items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold transition-[color] ${
-              locale === "en" ? "text-fg" : "text-fg-secondary hover:text-fg"
-            }`}
-            onClick={() => {
-              setUiLocale("en");
-            }}
-          >
-            EN
-          </button>
-        </div>
+      <div className="absolute right-3 top-3 z-20 sm:right-5 sm:top-5">
+        <SegmentedControl
+          value={locale}
+          onChange={setUiLocale}
+          ariaLabel={t("language.toggleAria")}
+          equalWidth
+          size="sm"
+          options={[
+            { value: "nl", label: "NL" },
+            { value: "en", label: "EN" },
+          ]}
+        />
       </div>
 
       <article className="relative mx-auto max-w-xl">
@@ -391,53 +365,20 @@ export function WelcomeForm({
                     {t("welcome.narrativeLocale")}
                   </p>
                   <WelcomeControlSlot>
-                    <div
-                      className={`relative flex w-full ${HEADER_CONTROL_SHELL}`}
-                      role="group"
-                      aria-labelledby="welcome-locale-story"
-                    >
-                      <motion.span
-                        aria-hidden
-                        className="pointer-events-none absolute inset-y-1 w-[calc(50%-6px)] rounded-full bg-white/14 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.1)]"
-                        initial={false}
-                        animate={{
-                          left: locale === "nl" ? 4 : "calc(50% + 2px)",
-                        }}
-                        transition={
-                          rm
-                            ? { duration: 0.15 }
-                            : { type: "spring", stiffness: 420, damping: 32 }
-                        }
-                      />
-                      <button
-                        type="button"
-                        className={`relative z-[1] flex w-1/2 items-center justify-center rounded-full px-3 py-2.5 text-sm font-semibold transition-[color] ${
-                          locale === "nl"
-                            ? "text-fg"
-                            : "text-fg-secondary hover:text-fg"
-                        }`}
-                        onClick={() => {
-                          setUiLocale("nl");
-                          form.setValue("locale", "nl");
-                        }}
-                      >
-                        Nederlands
-                      </button>
-                      <button
-                        type="button"
-                        className={`relative z-[1] flex w-1/2 items-center justify-center rounded-full px-3 py-2.5 text-sm font-semibold transition-[color] ${
-                          locale === "en"
-                            ? "text-fg"
-                            : "text-fg-secondary hover:text-fg"
-                        }`}
-                        onClick={() => {
-                          setUiLocale("en");
-                          form.setValue("locale", "en");
-                        }}
-                      >
-                        English
-                      </button>
-                    </div>
+                    <SegmentedControl
+                      className="w-full"
+                      value={locale}
+                      onChange={(next) => {
+                        setUiLocale(next);
+                        form.setValue("locale", next);
+                      }}
+                      ariaLabel={t("welcome.localeLabel")}
+                      equalWidth
+                      options={[
+                        { value: "nl", label: "Nederlands" },
+                        { value: "en", label: "English" },
+                      ]}
+                    />
                   </WelcomeControlSlot>
                 </StorySection>
                 <div className={welcomeFooterSolo}>

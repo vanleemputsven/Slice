@@ -31,7 +31,7 @@ import {
 } from "react";
 import type { AppLocale } from "@/lib/i18n/locale";
 import { sliceT, type SliceMessageKey } from "@/lib/i18n/messages";
-import { HEADER_CONTROL_SHELL } from "@/components/layout/header-controls";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { HeroScreenshotSlideshow } from "@/components/marketing/hero-screenshot-slideshow";
 import { LandingValueTicker } from "@/components/marketing/landing-value-ticker";
 
@@ -268,37 +268,17 @@ export function HomeLanding({ isSignedIn }: HomeLandingProps) {
           </nav>
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <div
-              className={`relative inline-flex min-h-0 ${HEADER_CONTROL_SHELL} py-0.5 pl-0.5 pr-0.5`}
-              role="group"
-              aria-label={t("language.toggleAria")}
-            >
-              <span
-                className="pointer-events-none absolute inset-y-1 w-[calc(50%-5px)] rounded-full bg-white/12 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)] transition-[left] duration-200 ease-out"
-                style={{
-                  left: locale === "nl" ? "4px" : "calc(50% + 2px)",
-                }}
-                aria-hidden
-              />
-              <button
-                type="button"
-                className={`relative z-[1] flex min-w-[2.75rem] items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold transition-[color] ${
-                  locale === "nl" ? "text-fg" : "text-fg-secondary hover:text-fg"
-                }`}
-                onClick={() => setLoginLocale("nl")}
-              >
-                NL
-              </button>
-              <button
-                type="button"
-                className={`relative z-[1] flex min-w-[2.75rem] items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold transition-[color] ${
-                  locale === "en" ? "text-fg" : "text-fg-secondary hover:text-fg"
-                }`}
-                onClick={() => setLoginLocale("en")}
-              >
-                EN
-              </button>
-            </div>
+            <SegmentedControl
+              value={locale}
+              onChange={setLoginLocale}
+              ariaLabel={t("language.toggleAria")}
+              equalWidth
+              size="sm"
+              options={[
+                { value: "nl", label: "NL" },
+                { value: "en", label: "EN" },
+              ]}
+            />
 
             {isSignedIn ? (
               <Link
